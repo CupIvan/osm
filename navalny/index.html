@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Все штабы Алексея Навального на online карте</title>
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css" integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ==" crossorigin=""/>
+	<script src="https://unpkg.com/leaflet@1.3.0/dist/leaflet.js" integrity="sha512-C7BBF9irt5R7hqbUm2uxtODlUVs+IsNu2UULGuZN7gM+k/mmeG4xvIEac01BtQa4YIkUpp23zZC4wIwuXaPMQA==" crossorigin=""></script>
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/osm.js"></script>
+
+	<style>
+		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<div id="map"></div>
+
+<script>
+var H = {};
+var i, a, t = document.location.hash.replace(/.+?\?/, '').split('&');
+for (i = 0; i < t.length; i++) { a = t[i].split('='); H[a[0]] = a[1]; }
+
+var map = L.map('map').setView([H.lat||53.814, H.lon||55.679], H.z||5)
+var markers = {}, lines = {}
+var stat = {n:0, nk:0, ne: 0, n_ref:0}
+
+if (!H.lat) map.locate()
+
+L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+	attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>',
+	maxZoom: 20,
+	maxNativeZoom: 18,
+}).addTo(map)
+
+var g_osm_objects = {}
+
+map.createPane('circlePane').style.zIndex = 410
+
+function str_replace(x, from, to)
+{
+	var i
+	for (i=0; i<from.length; i++)
+		x = x.replace(new RegExp(from[i], 'g'), to[i])
+	return x
+}
+
+/** содержимое popup */
+function make_popup(data)
+{
+	var x, st = '', tab = '    • ', a = data.tags
+
+	st += '<h2>'+a.name+'</h2>'
+	if (x = a['opening_hours'])
+	{
+		var i, time = ''
+		x = str_replace(x, ['Mo','Tu','We','Th','Fr','Sa','Su','-'], ['Пн','Вт','Ср','Чт','Пт','Сб','Вс',' – ']).split(';')
+		for (i=0; i<x.length; i++)
+			time += '<br>'+tab+'<b style="display: inline-block; width: 60px">'+x[i].replace(/(\D) (\d)/, '$1</b> $2')
+		st += 'Время работы:'+time
+	}
+	if (x = a['contact:phone']) st += '<br>Телефон:<br>'+tab+'<a href="tel:'+x.replace(/[^\d\+]/g, '')+'">'
+		+ x.replace(/[^\d\+]/g, '').replace(/(\+.)(...)(..)(..)/, '$1 ($2) $3-$4')+'</a>'
+	st += '<br><br>Ссылки:'
+	if (x = a['contact:website'])
+	st += '<br>'+tab+'<a href="'+x+'" target="_blank">официальная страница</a>'
+	if (x = a['contact:vk'])
+	st += '<br>'+tab+'<a href="'+x+'" target="_blank">страница вконтакте</a>'
+
+	st += '<br><hr><small>Данные с сайта <a href="'+josm.link(data.id)+'" target="_blank">OpenStreetMap</a>'
+
+	return st;
+}
+
+function update_hash()
+{
+	var hash = '?z='+map.getZoom()
+	var a = map.getCenter()
+	hash += '&lat='+a.lat+'&lon='+a.lng
+	hash = '#'+(Math.round(a.lat*a.lat/10+a.lng*a.lng/10))+'/'+hash
+	document.location = hash
+}
+
+/** основная функция для загрузки и отрисовки геометрии */
+function init()
+{
+	osm.search({'name': 'Штаб Алексея Навального', 'node': true}, function(data){
+		if (!data.length) return $('info', 'Нет данных')
+		$('info', 'Данные загружены')
+		var i
+		for (i=0; i<data.length; i++)
+			L.marker(data[i]).addTo(map).bindPopup(0, { data: data[i] })
+		$('info', 'Всего найдено в '+i+' штаб'+ok(i, '', 'а', 'ов')+' в мире')
+	})
+
+	$('info', 'Загрузка...')
+}
+
+init()
+map.on('moveend', update_hash)
+map.on('popupopen', function(e){ e.popup.setContent(make_popup(e.popup.options.data)) })
+
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>

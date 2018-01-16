@@ -109,7 +109,7 @@ function draw()
 
 	if (map.getZoom() >= 16)
 	{
-		osm.search({'building:architecture':true, bounds: map.getBounds().toBBoxString().split(',')}, function(data){
+		osm.search({'building:architecture':true, bounds: map.getBounds().toBBoxString().split(','), way:1, relation: 1}, function(data){
 			if (!data.length) return $('info', 'Нет данных')
 			$('info', 'Данные загружены')
 			var i, a

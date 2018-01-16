@@ -1,26 +1,37 @@
 var osm = {
 
 search: function(filter, handler){
-	var bounds = filter.bounds, k = 60; // 60 - коэффициент округления координат (чем меньше - тем больший регион скачивается)
-	bounds = Math.floor(bounds[1]*k)/k+','+Math.floor(bounds[0]*k)/k+','+
-		Math.ceil(bounds[3]*k)/k+','+Math.ceil(bounds[2]*k)/k;
-	delete filter.bounds
+	var bounds = ''
+	if (filter.bounds)
+	{
+		filter.bounds, k = 60 // 60 - коэффициент округления координат (чем меньше - тем больший регион скачивается)
+		bounds = '('+Math.floor(bounds[1]*k)/k+','+Math.floor(bounds[0]*k)/k+','+
+			Math.ceil(bounds[3]*k)/k+','+Math.ceil(bounds[2]*k)/k+')';
+		delete filter.bounds
+	}
+
+	var type = {}
+	if (filter[x='node'])     { type[x]=1; delete filter[x] }
+	if (filter[x='way'])      { type[x]=1; delete filter[x] }
+	if (filter[x='relation']) { type[x]=1; delete filter[x] }
+	if (!type.node && !type.way && !type.relation) type = {node:1}
 
 	var i, f=''
-	for (i in filter) f=i // FIXME: сделать правильно
+	for (i in filter)
+		f = '"'+i+'"' + (filter[i]?'="'+filter[i]+'"':'')
 
 	var query = ''
 		+'[out:json];('
-			+'node["'+f+'"]('+bounds+');'
-			+'way["'+f+'"]('+bounds+');'
-			+'rel["'+f+'"]('+bounds+');'
+			+(type.node    ?('node['+f+']'+bounds+';'):'')
+			+(type.way     ?('way[' +f+']'+bounds+';'):'')
+			+(type.relation?('rel[' +f+']'+bounds+';'):'')
 		+');(._;>;);out body;';
 
 	ajax.load('/overpass.php?query='+encodeURIComponent(query), function(x){
-		var i, j, a, res = []
+		var i, j, a, data = []
 		var nodes = ways = {}
 
-		if (!x.elements) return res
+		if (!x.elements) return data
 
 		for (i = 0; i < x.elements.length; i++)
 		{
@@ -28,18 +39,31 @@ search: function(filter, handler){
 			if (a.tags)
 			for (j in filter)
 			if (a.tags[j])
+			if (!filter[j] || (filter[j] && a.tags[j] == filter[j]))
 			{
-				res.push(a)
+				data.push(a)
 				break
 			}
 
 			if (a.type == 'node') nodes[a.id] = a; else
-			if (a.type == 'way')  ways[a.id]  = a
+			if (a.type == 'way')  ways [a.id] = a
+		}
+
+		var _coords = function(a){
+			var i, id, res = []
+			for (i=0; i<a.length; i++)
+			{
+				id = (typeof(a[i]) == 'object') ? a[i].id : a[i]
+				if (nodes[id])
+					res.push([ nodes[id].lon, nodes[id].lat ])
+			}
+			return res
 		}
 
 		// создаём список точек для геометрии
-		for (a=res[i=0]; i<res.length; a=res[++i])
+		for (a=data[i=0]; i<data.length; a=data[++i])
 		{
+			data[i].geoJSON = []
 			if (a.type == 'relation')
 			{
 				var ref, k, last_node = 0
@@ -64,22 +88,34 @@ search: function(filter, handler){
 						if (x.indexOf(last_node) == -1)
 							x.push(last_node)
 					}
+				} else
+				if (a.members[j].role == 'part')
+				{
+					ref = a.members[j].ref
+					if (!ways[ref]) continue
+
+					data[i].geoJSON.push(_coords(ways[ref].nodes))
+					x = x.concat(ways[ref].nodes)
 				}
-				res[i].nodes = x
+
+				data[i].nodes = x
 			}
 			if (a.type == 'way' || a.type == 'relation')
 			{
-				res[i].geo = []
-				for (j=0; j<res[i].nodes.length; j++)
-				if (nodes[res[i].nodes[j]])
-					res[i].geo.push([
-						nodes[res[i].nodes[j]].lat,
-						nodes[res[i].nodes[j]].lon,
-					])
+				x=[]
+				for (j=0; j<data[i].nodes.length; j++)
+				if (nodes[data[i].nodes[j]])
+					x.push(nodes[data[i].nodes[j]])
+				data[i].nodes = x
+
+				data[i].geo = _coords(data[i].nodes)
+				data[i].geoJSON.push(data[i].geo)
 			}
+
+			data[i].geoJSON = {type: 'MultiPolygon', coordinates: [data[i].geoJSON]}
 		}
 
-		handler(res)
+		handler(data)
 	})
 }
 

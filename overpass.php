@@ -19,7 +19,7 @@ if (empty($page))
 {
 	$server = 'http://overpass-api.de/api/';
 	$page = file_get_contents("$server/interpreter?data=".urlencode($query));
-	file_put_contents($fname, $page);
+	@file_put_contents($fname, $page);
 	$log .= ' DOWNLOAD';
 }
 
