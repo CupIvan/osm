@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Карта подъездов и номера квартир OSM</title>
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.0/dist/leaflet.css" integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ==" crossorigin=""/>
+	<script src="https://unpkg.com/leaflet@1.3.0/dist/leaflet.js" integrity="sha512-C7BBF9irt5R7hqbUm2uxtODlUVs+IsNu2UULGuZN7gM+k/mmeG4xvIEac01BtQa4YIkUpp23zZC4wIwuXaPMQA==" crossorigin=""></script>
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+
+	<style>
+		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<div id="map"></div>
+
+<script>
+var map = map.init()
+var markers = {}, lines = {}
+var stat = {n:0, nk:0, ne: 0, n_ref:0}
+
+var g_osm_objects = {}
+
+map.createPane('circlePane').style.zIndex = 410
+map.on('popupopen', function(e){ if (e.popup.options.osm_id) e.popup.setContent(make_popup(g_osm_objects[e.popup.options.osm_id])); });
+
+/** цвет здания в зависимости от OSM ошибок */
+var color = { ok: '#0F0', warn: '#FF0', error: '#F00', noactive: '#000', blue: '#00F' };
+function getBuildingColor(a)
+{
+	c = color.ok
+	if (!a.tags['building:levels'])  c = color.warn;
+	if (!a.tags['addr:housenumber']) c = color.error;
+	if (!a.tags['addr:street'])      c = color.error;
+	if (!a.entrances.length)         c = color.error;
+	return c
+}
+
+var calcFlats = function(x)
+{
+	var n = 0, i, t = x.split(';');
+	for (i = 0; i < t.length; i++)
+	{
+		t[i] = t[i].split('-');
+		if (t[i].length == 2) n += t[i][1] - t[i][0] + 1;
+		else if (t[i].length == 1) n++;
+	}
+	return n;
+}
+
+
+function createEntranceMarker(a)
+{
+	if (a.tags.barrier) return false // пропускаем входы в оградах
+
+	var comment = ''
+
+	c = color.ok;
+
+	if (a.tags.entrance != 'staircase' && a.tags.entrance != 'home')
+		c = color.noactive;
+
+	// дом нарисован точкой
+	if (a.tags.building == 'apartments')
+	{
+		if (a.tags['addr:flats'])
+		{
+			c = color.warn;
+			comment += '<br>Используйте на точке <b>building:flats=<i>число_квартир</i></b> вместо <b>addr:flats</b>';
+		}
+	}
+	else
+
+	if (a.tags['addr:flats']) // заданы квартиры
+	{
+		d = calcFlats(a.tags['addr:flats']);
+		a._num_flats = d;
+		if (d) stat.nk += d;
+		else
+		{
+			c = color.error;
+			comment += '<br>Неверно задан диапазон квартир <b>addr:flats</b>';
+		}
+
+		if (a.tags.entrance == 'home')
+		{
+			if (d > 1)
+			{
+				c = color.error;
+				comment += '<br>Больше чем 1 квартира в частном входе <b>entrance=home</b>';
+			}
+
+			if (a.tags.ref)
+			{
+				c = color.warn;
+				comment += '<br>При указании <b>entrance=home</b> не нужно использовать <b>ref=N</b>';
+			}
+		}
+		else
+		{
+			if (d == 1)
+			{
+				if (a.tags.entrance != 'home')
+				{
+					c = color.error;
+					comment += '<br>Для входа в квартиру нужно использовать <b>entrance=home</b>';
+				}
+				if (a.tags.ref)
+				{
+					c = color.warn;
+				comment += '<br>При указании <b>entrance=home</b> не нужно использовать <b>ref=N</b>';
+				}
+			}
+			else
+			{
+				if (a.tags.entrance != 'staircase')
+				{
+					c = color.error;
+					comment += '<br>Для входа в жилой подъезд нужно использовать <b>entrance=staircase</b>';
+				}
+				if (!a.tags.ref)
+					{
+					c = color.error;
+					comment += '<br>Нужно установить номер подъезда <b>ref=N</b>';
+				}
+			}
+		}
+	}
+	else
+	if (a.tags.ref) // задан номер подъезда, но не заданы квартиры
+	{
+		c = color.warn;
+		comment += '<br>Нужно проставить номера квартир <b>addr:flats</b>';
+	}
+
+	comment = '<br><i>'+comment+'</i>';
+
+	if (a.tags['addr:flats']) comment = '<br>Квартиры №'+a.tags['addr:flats']+
+		(a._num_flats?' (всего '+a._num_flats+')':'')+comment;
+	if (a.tags.ref) comment = '<br>Подъезд №'+a.tags.ref+comment;
+
+	var title = '';
+	if (a.tags.entrance == 'yes')       title = 'Вход';
+	if (a.tags.entrance == 'exit')      title = 'Выход';
+	if (a.tags.entrance == 'staircase') title = 'Вход в жилой подъезд';
+	if (a.tags.entrance == 'main')     {title = 'Главный вход'; c = color.blue }
+	if (a.tags.entrance == 'emergency') title = 'Пожарный выход';
+	if (a.tags.entrance == 'home')      title = 'Вход в частный дом';
+	if (a.tags.entrance == 'service')   title = 'Служебный вход';
+	if (a.tags.entrance == 'shop')    { title = 'Вход в магазин'; c = color.blue }
+
+	if (a.tags.access == 'yes')      title += ' (доступен всем)';
+	if (a.tags.access == 'delivery') title += ' (только для погрузки/разгрузки)';
+	if (a.tags.access == 'private')  title += ' (доступ по ключу/карте)';
+	if (a.tags.access == 'no')       title += ' (доступ запрещён)';
+
+	comment = '<b>'+title+'</b>' + comment;
+
+	if (c != color.ok)
+	{
+		comment += '<br><br>';
+		comment += '<a href="http://level0.osmz.ru/?url=node/'+a.id+'" target="_blank">level0</a>'
+		stat.ne++;
+	}
+
+	var radius = 2
+	if (a.tags.entrance == 'staircase') radius = 5
+	if (a.tags.entrance == 'home')      radius = 3
+	if (a.tags.entrance == 'main')      radius = 3
+
+	var marker = L.circle([a.lat, a.lon], radius, { color: c, weight: 2, fillColor: c, fillOpacity: 0.5, pane: 'circlePane' })
+		.addTo(map)
+		.bindPopup(comment);
+	if (a.tags.ref && stat.n_ref++ < 300)
+		marker.bindTooltip(a.tags.ref, {permanent: true, direction: 'center', className: 'ref'})
+
+	return marker
+}
+
+/** содержимое popup на здании */
+function make_popup(a)
+{
+	var i, st = ''
+
+	if (!a || !a.tags) return
+
+	if (a.tags['building'] == 'apartments') st += '<b>Многоэтажный жилой дом</b><br>'
+
+	if (!a.tags['building:levels'])
+		st += 'Укажите кол-во этажей <b>building:levels</b><br>'
+	else
+		st += 'Этажей: <i>'+a.tags['building:levels']+'</i><br>'
+
+	if (!a.tags['addr:housenumber'])
+		st += 'Укажите номер дома <b>addr:housenumber</b><br>'
+	else
+		st += 'Номер дома: <i>'+a.tags['addr:housenumber']+'</i><br>'
+
+	if (!a.tags['addr:street'])
+		st += 'Укажите улицу <b>addr:street</b><br>'
+	else
+		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
+
+	if (!a.entrances.length)
+		st += 'В жилом доме не найдено ни одного подъезда!<br>'
+	else
+	{
+		st += 'Подъездов '+a.entrances.length+': '
+		a.entrances.sort(function(x,y){ return x.ref - y.ref })
+		for (i=0; i<a.entrances.length; i++)
+			st += '<i title="Подъезд №'+a.entrances[i].ref+'">' + a.entrances[i]['addr:flats'] + '</i> '
+		st += '<br>'
+	}
+
+	st += '<br><small>'+a.type+'#'+a.id+'</small>'
+
+	return st;
+}
+
+/** основная функция для загрузки и отрисовки геометрии */
+function draw_entrance()
+{
+	if (map.getZoom() >= 16)
+	{
+		osm.search({building: 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
+			if (!data.length) return $('info', 'Нет данных')
+			$('info', 'Данные загружены')
+
+			var i, a, node
+			for (a=data[i=0]; i<data.length; a=data[++i])
+			{
+				a.entrances = []
+				for (j = 0; j < a.nodes.length; j++)
+				if (a.nodes[j].tags)
+				if ('staircase,home'.indexOf(a.nodes[j].tags.entrance) != -1)
+				{
+					a.entrances.push(a.nodes[j].tags)
+					node = a.nodes[j]
+					if (!markers[node.id])
+						markers[node.id] = createEntranceMarker(node)
+				}
+
+				if (a.tags['building:part'] && !a.entrances.length) continue
+
+				g_osm_objects[a.id] = a
+
+				c = getBuildingColor(a)
+				if (!lines[a.id] && c)
+				lines[a.id] = L.geoJSON(a.geoJSON, {style: {color: c, weight: 2, fillColor: c }})
+					.addTo(map)
+					.bindPopup('', { data: data[i] })
+			}
+		})
+		msg = 'Загрузка...';
+	} else
+		msg = 'Для отображения подъездов необходимо увеличить масштаб карты. <a href="https://forum.openstreetmap.org/viewtopic.php?pid=635464">Отзывы тут</a>.';
+
+	$('info', msg);
+}
+
+map.on('moveend', draw_entrance);
+draw_entrance();
+
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>

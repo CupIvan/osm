@@ -1,17 +1,17 @@
 var map = {
-init: function(p){
-	var H = p || {};
+init: function(params){
+	params = params || {};
 	var i, a, t = document.location.hash.replace(/.+?\?/, '').split('&');
-	for (i = 0; i < t.length; i++) { a = t[i].split('='); H[a[0]] = a[1]; }
+	for (i = 0; i < t.length; i++) { a = t[i].split('='); params[a[0]] = a[1]; }
 
 	// или пробуем загрузить последние координаты
-	if (!H[i='lat'] && (t=localStorage.getItem(i))) H[i] = t
-	if (!H[i='lon'] && (t=localStorage.getItem(i))) H[i] = t
-	if (!H[i='z']   && (t=localStorage.getItem(i))) H[i] = t
+	if (!params[i='lat'] && (t=localStorage.getItem(i))) params[i] = t
+	if (!params[i='lon'] && (t=localStorage.getItem(i))) params[i] = t
+	if (!params[i='z']   && (t=localStorage.getItem(i))) params[i] = t
 
-	var map = L.map('map').setView([H.lat||53.814, H.lon||55.679], H.z||5)
+	var map = L.map(params.id||'map').setView([params.lat||55.74, params.lon||37.62], params.z||11)
 
-	if (!H.lat && document.location.protocol == 'https:') map.locate()
+	if (!params.lat && document.location.protocol == 'https:') map.locate()
 
 	L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
 		attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>',
@@ -21,7 +21,7 @@ init: function(p){
 
 	map.on('popupopen', function(e){ e.popup.setContent(make_popup(e.popup.options.data)) })
 
-	if (p.update_hash === false)
+	if (params.update_hash !== false)
 	map.on('moveend', function(){
 		var hash = '?z='+map.getZoom()
 		var a = map.getCenter()

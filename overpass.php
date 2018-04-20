@@ -2,7 +2,7 @@
 
 $query = @$_GET['query'];
 
-$fname = './cache/'.md5($query);
+$fname = './cache/'.md5($query).'.json';
 
 $log = date('H:i:s d.m.Y')." - ".$_SERVER['REMOTE_ADDR'];
 

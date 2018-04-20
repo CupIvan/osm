@@ -5,8 +5,12 @@ search: function(filter, handler){
 	if (filter.bounds)
 	{
 		filter.bounds, k = 60 // 60 - коэффициент округления координат (чем меньше - тем больший регион скачивается)
-		bounds = '('+Math.floor(bounds[1]*k)/k+','+Math.floor(bounds[0]*k)/k+','+
-			Math.ceil(bounds[3]*k)/k+','+Math.ceil(bounds[2]*k)/k+')';
+		bounds = ''
+			+ '(' + Math.floor(filter.bounds[1]*k)/k
+			+ ',' + Math.floor(filter.bounds[0]*k)/k
+			+ ',' + Math.ceil( filter.bounds[3]*k)/k
+			+ ',' + Math.ceil( filter.bounds[2]*k)/k
+			+ ')';
 		delete filter.bounds
 	}
 
