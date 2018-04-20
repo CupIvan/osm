@@ -1,10 +1,11 @@
 var osm = {
+search_region: 60, // коэффициент округления координат (чем меньше - тем больший регион скачивается)
 
 search: function(filter, handler){
 	var bounds = ''
 	if (filter.bounds)
 	{
-		filter.bounds, k = 60 // 60 - коэффициент округления координат (чем меньше - тем больший регион скачивается)
+		filter.bounds, k = osm.search_region
 		bounds = ''
 			+ '(' + Math.floor(filter.bounds[1]*k)/k
 			+ ',' + Math.floor(filter.bounds[0]*k)/k
@@ -22,7 +23,11 @@ search: function(filter, handler){
 
 	var i, f=''
 	for (i in filter)
-		f = '"'+i+'"' + (filter[i]?'="'+filter[i]+'"':'')
+	{
+		f = '"'+i+'"'
+		if (filter[i] !== true)
+			f += filter[i] ? '="'+filter[i]+'"' : ''
+	}
 
 	var query = ''
 		+'[out:json];('
@@ -43,7 +48,7 @@ search: function(filter, handler){
 			if (a.tags)
 			for (j in filter)
 			if (a.tags[j])
-			if (!filter[j] || (filter[j] && a.tags[j] == filter[j]))
+			if (filter[j] === true || (filter[j] && a.tags[j] == filter[j]))
 			{
 				data.push(a)
 				break
