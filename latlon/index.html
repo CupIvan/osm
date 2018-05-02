@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>OSM: определитель координат и обратный геокодер</title>
+	<meta charset="utf-8"/>
+	<style>
+		#map  { float: left; width: 800px; height: 500px; border: 2px solid #000; }
+		#info { float: left; background: #EEE; padding: 10px 20px; margin-left: 20px; min-width: 300px; max-width: 450px; }
+		h3    { font-size: 14px; margin: 0;  }
+
+		.olControlAttribution { bottom: 0 !important; right: 0 !important;
+			padding: 2px 5px; background: rgba(0,0,0,0.2); font: 10px Arial !important; }
+	</style>
+	<script src="/i/lib.js"></script>
+	<script type="text/javascript" src="http://www.openlayers.org/api/OpenLayers.js"></script>
+	<script src="http://api-maps.yandex.ru/2.0/?load=package.full&lang=ru-RU" type="text/javascript"></script>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="info">
+	<h3>Параметры карты <a href="http://www.openlayers.org">OpenLayers</a>:</h3>
+	<p>Масштаб: <i id="zoom"></i></p>
+	<p>Центр: <i id="center"></i></p>
+	<h3>Координаты:</h3>
+	<p>Мышь:  <i id="mouse"></i></p>
+	<p>Маркер:  <i id="click"></i></p>
+	<h3>Геокодер <a href="http://wiki.openstreetmap.org/wiki/Nominatim">Nominatim</a>:</h3>
+	<p id="geo"></p>
+	<h3>Геокодер <a href="http://api.yandex.ru/maps/doc/geocoder/desc/concepts/About.xml">Яндекс</a>:</h3>
+	<p id="geo3"></p>
+	<h3>Геокодер <a href="http://forum.openstreetmap.org/viewtopic.php?pid=238394#p238394">openstreetmap.by</a>:</h3>
+	<p id="geo2"></p>
+</div>
+
+
+<script>
+
+/** преобразование проекций */
+function _LatLon(lat, lon)
+{
+	if (lon == undefined)
+	return lat.transform(
+			new OpenLayers.Projection("EPSG:900913"),
+			new OpenLayers.Projection("EPSG:4326")
+		);
+
+	return new OpenLayers.LonLat(lon, lat).transform(
+			new OpenLayers.Projection("EPSG:4326"),  // преобразование из WGS 1984
+			new OpenLayers.Projection("EPSG:900913") // в Spherical Mercator Projection
+		)
+}
+
+/** обратное геокодирование */
+function geocoder(x, map)
+{
+	$('geo', 'поиск...');
+	ajax.loadAjax('http://nominatim.openstreetmap.org/reverse?format=json&lat='+x.lat+'&lon='+x.lon+'&email=mail@cupivan.ru', '', function(e)
+	{
+		var st = 'Ошибка геокодирования';
+		if (e)
+		{
+			var a = e.address, place;
+
+			st = '';
+			if (place = a.city)    st += 'г. ' + place;
+			else
+			if (place = a.town)    st += 'г. ' + a.town;
+			else
+			if (place = a.village) st += 'дер. ' + a.village;
+			else
+			if (place = a.hamlet)  st += 'пос. ' + a.hamlet;
+
+			if (a.state.indexOf(place.substr(0,5)) == -1) // выводим, если область не совпадает с городом
+			st = a.state + ', ' + st;
+
+			if (a.road)         st += ', ' + a.road
+			if (a.house_number) st += ' '  + a.house_number
+
+			var i, place = {
+				administrative: 'Граница',
+				kindergarten:   'Сад',
+				emergency: 'Больницаа',
+				bus_stop:  'Остановка',
+				farmyard:  'Ферма',
+				wood:    'Лес',
+				water:   'Водоём',
+				tunnel:  'Тоннель',
+				school:  'Школа',
+				suburb:  'Район',
+				stadium: 'Стадион',
+				supermarket: 'Магазин',
+				department_store: 'Торговый центр',
+			_:0}
+			for (i in place)
+			if (a[i]) st += '<br>'+place[i]+': <i>' + a[i] + '</i>';
+
+			//st = e.display_name;
+		}
+		$('geo', st);
+		markerGeo.moveTo(map.getLayerPxFromLonLat(_LatLon(e.lat, e.lon)));
+	});
+	$('geo2', 'поиск...');
+	ajax.loadJS('http://openstreetmap.by/geokot/?request=describe&callback=geokot&locale=ru&lat='+x.lat+'&lon='+x.lon+'&email=mail@cupivan.ru');
+	$('geo3', 'поиск...');
+	var myGeocoder = ymaps.geocode([x.lat, x.lon], {kind: 'house', json: true});
+	myGeocoder.then(
+		function (res) {
+			try
+			{
+				var a  = res.GeoObjectCollection.featureMember[0].GeoObject;
+				var coord = a.Point.pos.split(' ');
+				markerYandex.moveTo(map.getLayerPxFromLonLat(_LatLon(coord[1], coord[0])));
+				$('geo3', a['description']+'<br>'+a['name']);
+			} catch(e) { $('geo3', 'Ничего не найдено!'); }
+		},
+		function (err) { $('geo3', 'Ошибка'); }
+	);
+}
+function geokot(e)
+{
+	var st = 'Ошибка геокодирования';
+	if (e)
+	{
+		var _ = function(x, tab)
+		{
+			var i, st = '', t;
+			for (i in x)
+			{
+				if (typeof(x[i]) == 'object')
+				{
+					t = _(x[i], tab+'   ');
+					if (t)
+						st += tab+i+':<br>'+t;
+				}
+				else
+				if (x[i])
+					st += tab+i+': '+x[i]+'<br>';
+			}
+			return st;
+		}
+		st = _(e, '');
+	}
+	$('geo2', st);
+}
+
+
+function coordsToString(x) { x = _LatLon(x); return 'lat='+round(x.lat, 5)+'&lon='+round(x.lon, 5); }
+function round(x, a) { a = Math.pow(10, a); return Math.round(x * a) / a; }
+
+/** инициализация */
+$(function(){
+	// настройка карты
+	var map = new OpenLayers.Map("map");
+	var mapnik = new OpenLayers.Layer.OSM();
+	map.addLayer(mapnik);
+
+	var g = function(x) { var re=(new RegExp(x+'=([^&]+)')).exec(document.location); return re ? re[1] : false; }
+
+	map.setCenter(_LatLon(g('lat')||55.7518, g('lon')||37.6233), g('zoom')||10);
+
+	// слой с метками
+	var markerCenter, markerClick;
+	var layerMarkers = new OpenLayers.Layer.Markers("Markers");
+	map.addLayer(layerMarkers);
+	// метка при клике
+	layerMarkers.addMarker(
+		markerClick = new OpenLayers.Marker(
+			_LatLon(0, 0),
+			new OpenLayers.Icon('marker.png',
+				new OpenLayers.Size(  21,  21),
+				new OpenLayers.Pixel(-10, -21)
+			)
+		)
+	);
+	// метка при геокодировании
+	layerMarkers.addMarker(
+		markerGeo = new OpenLayers.Marker(
+			_LatLon(0, 0),
+			new OpenLayers.Icon('geo.png',
+				new OpenLayers.Size(  21,  21),
+				new OpenLayers.Pixel(-10, -21)
+			)
+		)
+	);
+	// метка при геокодировании от Яндекса
+	layerMarkers.addMarker(
+		markerYandex = new OpenLayers.Marker(
+			_LatLon(0, 0),
+			new OpenLayers.Icon('yandex.png',
+				new OpenLayers.Size(  21,  21),
+				new OpenLayers.Pixel(-10, -21)
+			)
+		)
+	);
+	// центр карты
+	layerMarkers.addMarker(
+		markerCenter = new OpenLayers.Marker(
+			map.getCenter(),
+			new OpenLayers.Icon('center.png',
+				new OpenLayers.Size( 16, 16),
+				new OpenLayers.Pixel(-8, -8)
+			)
+		)
+	);
+
+	// инициализируем справку
+	$('center', coordsToString(map.getCenter()));
+	$('zoom', map.getZoom());
+
+	// обработчики
+	map.events.register('click', map, function(e) {
+		$('click', coordsToString(map.getLonLatFromViewPortPx(e.xy)));
+		markerClick.moveTo(map.getLayerPxFromViewPortPx(e.xy));
+		geocoder(_LatLon(map.getLonLatFromViewPortPx(e.xy)), map);
+	});
+	map.events.register('mousemove', map, function(e) {
+		$('mouse', coordsToString(map.getLonLatFromViewPortPx(e.xy)));
+	});
+	map.events.register('move', map, function(e) {
+		$('center', coordsToString(map.getCenter()));
+		markerCenter.moveTo(map.getLayerPxFromLonLat(map.getCenter()));
+	});
+	map.events.register('zoomend', map, function(e) {
+		$('zoom', map.getZoom());
+	});
+
+});
+
+</script>
+
+<!-- Yandex.Metrika counter --><script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
