@@ -17,9 +17,10 @@ if (file_exists($fname) && filemtime($fname) > time() - 2*3600)
 
 if (empty($page))
 {
+	@file_put_contents($fname, '{}');
 	$server = 'http://overpass-api.de/api/';
-	$page = file_get_contents("$server/interpreter?data=".urlencode($query));
-	@file_put_contents($fname, $page);
+	$page = @file_get_contents("$server/interpreter?data=".urlencode($query));
+	if ($page) @file_put_contents($fname, $page); else unlink($fname);
 	$log .= ' DOWNLOAD';
 }
 

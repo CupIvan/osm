@@ -27,7 +27,7 @@ init: function(params){
 		var a = map.getCenter()
 		hash += '&lat='+a.lat+'&lon='+a.lng
 		hash = '#'+(Math.round(a.lat*a.lat/10+a.lng*a.lng/10))+'/'+hash
-		document.location = hash
+		history.replaceState(null, null, hash);
 
 		// сохраняем также в localStorage
 		localStorage.setItem('lat', a.lat)

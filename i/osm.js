@@ -36,7 +36,7 @@ search: function(filter, handler){
 			+(type.relation?('rel[' +f+']'+bounds+';'):'')
 		+');(._;>;);out body;';
 
-	ajax.load('/overpass.php?query='+encodeURIComponent(query), function(x){
+	ajax.load('/overpass/?query='+encodeURIComponent(query), function(x){
 		var i, j, a, data = []
 		var nodes = ways = {}
 
@@ -111,17 +111,28 @@ search: function(filter, handler){
 			}
 			if (a.type == 'way' || a.type == 'relation')
 			{
-				x=[]
+				x=[]; data[i].center=[0, 0]
 				for (j=0; j<data[i].nodes.length; j++)
 				if (nodes[data[i].nodes[j]])
+				{
 					x.push(nodes[data[i].nodes[j]])
+					data[i].center[0] += nodes[data[i].nodes[j]].lat
+					data[i].center[1] += nodes[data[i].nodes[j]].lon
+				}
 				data[i].nodes = x
+				data[i].center[0] /= x.length
+				data[i].center[1] /= x.length
 
 				data[i].geo = _coords(data[i].nodes)
 				data[i].geoJSON.push(data[i].geo)
 			}
+			if (a.type == 'node')
+				data[i].center = [a.lat, a.lon]
 
-			data[i].geoJSON = {type: 'MultiPolygon', coordinates: [data[i].geoJSON]}
+			if (a.type == 'node')
+				data[i].geoJSON = {type: 'Point', coordinates: [a.lat, a.lon]}
+			else
+				data[i].geoJSON = {type: 'MultiPolygon', coordinates: [data[i].geoJSON]}
 		}
 
 		handler(data)
