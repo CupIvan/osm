@@ -19,7 +19,7 @@ init: function(params){
 		maxNativeZoom: 18,
 	}).addTo(map)
 
-	map.on('popupopen', function(e){ e.popup.setContent(make_popup(e.popup.options.data)) })
+	map.on('popupopen', function(e){ if (make_popup) e.popup.setContent(make_popup(e.popup.options.data)) })
 
 	if (params.update_hash !== false)
 	map.on('moveend', function(){

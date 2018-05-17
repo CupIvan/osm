@@ -24,19 +24,21 @@ search: function(filter, handler){
 	var i, f=''
 	for (i in filter)
 	{
-		f = '"'+i+'"'
+		if (i == 'id') { f = '(id:'+filter[i]+')'; break; }
+		f += '["'+i+'"'
 		if (filter[i] !== true)
 			f += filter[i] ? '="'+filter[i]+'"' : ''
+		f += ']'
 	}
 
 	var query = ''
 		+'[out:json];('
-			+(type.node    ?('node['+f+']'+bounds+';'):'')
-			+(type.way     ?('way[' +f+']'+bounds+';'):'')
-			+(type.relation?('rel[' +f+']'+bounds+';'):'')
+			+(type.node    ?('node'+f+bounds+';'):'')
+			+(type.way     ?('way' +f+bounds+';'):'')
+			+(type.relation?('rel' +f+bounds+';'):'')
 		+');(._;>;);out body;';
 
-	ajax.load('/overpass/?data='+encodeURIComponent(query), function(x){
+	ajax('http://osm.cupivan.ru/overpass/?data='+encodeURIComponent(query), function(x){
 		var i, j, a, data = []
 		var nodes = ways = {}
 
@@ -47,6 +49,11 @@ search: function(filter, handler){
 			a = x.elements[i]
 			if (a.tags)
 			for (j in filter)
+			if (j == 'id')
+			{
+				if (a.id == filter[j]) { data.push(a); break }
+			}
+			else
 			if (a.tags[j])
 			if (filter[j] === true || (filter[j] && a.tags[j] == filter[j]))
 			{
@@ -130,7 +137,7 @@ search: function(filter, handler){
 				data[i].center = [a.lat, a.lon]
 
 			if (a.type == 'node')
-				data[i].geoJSON = {type: 'Point', coordinates: [a.lat, a.lon]}
+				data[i].geoJSON = {type: 'Point', coordinates: [a.lon, a.lat]}
 			else
 				data[i].geoJSON = {type: 'MultiPolygon', coordinates: [data[i].geoJSON]}
 		}

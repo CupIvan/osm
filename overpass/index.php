@@ -1,5 +1,8 @@
 <?php
 
+if (strpos(@$_SERVER['HTTP_ORIGIN'], 'cupivan.ru'))
+	header('Access-Control-Allow-Origin: *');
+
 $data = @$_GET['data'];
 
 $fname = './cache/'.md5($data).'.json';
