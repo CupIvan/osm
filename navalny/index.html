@@ -54,7 +54,7 @@ function make_popup(data)
 		st += 'Время работы:'+time
 	}
 	if (x = a['contact:phone']) st += '<br>Телефон:<br>'+tab+'<a href="tel:'+x.replace(/[^\d\+]/g, '')+'">'
-		+ x.replace(/[^\d\+]/g, '').replace(/(\+.)(...)(..)(..)/, '$1 ($2) $3-$4')+'</a>'
+		+ x.replace(/[^\d\+]/g, '').replace(/(\+.)(...)(...)(..)(..)/, '$1 ($2) $3-$4-$5')+'</a>'
 	st += '<br><br>Ссылки:'
 	if (x = a['contact:website'])
 	st += '<br>'+tab+'<a href="'+x+'" target="_blank">официальная страница</a>'
@@ -74,7 +74,7 @@ function init()
 		$('info', 'Данные загружены')
 		var i
 		for (i=0; i<data.length; i++)
-			L.marker(data[i]).addTo(map).bindPopup(0, { data: data[i] })
+			L.circleMarker(data[i], {radius: 5, color: data[i].disused ? "#777" : "#F55"}).addTo(map).bindPopup(0, { data: data[i] })
 		$('info', 'Всего найден'+ok(i,'','о','о')+' '+i+' штаб'+ok(i, '', 'а', 'ов')+' в мире')
 	})
 
