@@ -1,8 +1,8 @@
 <?php
 
-$query = @$_GET['query'];
+$data = @$_GET['data'];
 
-$fname = './cache/'.md5($query).'.json';
+$fname = './cache/'.md5($data).'.json';
 
 $log = date('H:i:s d.m.Y')." - ".$_SERVER['REMOTE_ADDR'];
 
@@ -18,13 +18,21 @@ if (file_exists($fname) && filemtime($fname) > time() - 2*3600)
 if (empty($page))
 {
 	@file_put_contents($fname, '{}');
-	$server = 'http://overpass-api.de/api/';
-	$page = @file_get_contents("$server/interpreter?data=".urlencode($query));
-	if ($page) @file_put_contents($fname, $page); else unlink($fname);
+	$servers = [
+		'https://lz4.overpass-api.de/api/interpreter',
+		'https://z.overpass-api.de/api/interpreter',
+		'http://overpass.openstreetmap.ru/cgi/interpreter',
+	];
+	if (strpos($_SERVER['HTTP_HOST'], '_.osm') !== false)
+		$servers = ['http://osm.cupivan.ru/overpass'];
+	$server = $servers[mt_rand(0, count($servers)-1)];
+	$url  = "$server/?data=".urlencode($data);
+	$page = @file_get_contents($url);
+	if ($page) @file_put_contents($fname, $page); else { unlink($fname); $page = '{"state": "error", "url": "'.$url.'"}'; }
 	$log .= ' DOWNLOAD';
 }
 
-$log .= " - $fname - $query\n";
+$log .= " - $fname - $data\n";
 
 @file_put_contents('./cache/'.date('Y-m-d').'.log', $log, FILE_APPEND);
 

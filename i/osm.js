@@ -36,11 +36,11 @@ search: function(filter, handler){
 			+(type.relation?('rel[' +f+']'+bounds+';'):'')
 		+');(._;>;);out body;';
 
-	ajax.load('/overpass/?query='+encodeURIComponent(query), function(x){
+	ajax.load('/overpass/?data='+encodeURIComponent(query), function(x){
 		var i, j, a, data = []
 		var nodes = ways = {}
 
-		if (!x.elements) return data
+		if (!x.elements) return handler(data)
 
 		for (i = 0; i < x.elements.length; i++)
 		{
