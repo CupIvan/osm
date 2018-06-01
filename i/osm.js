@@ -76,28 +76,47 @@ search: function(filter, handler){
 			return res
 		}
 
+		var is_sibling = function(x, y)
+		{
+			if (x == y) return 0
+			if (ways[x].nodes[ways[x].nodes.length - 1] == ways[y].nodes[0]) return 1
+			if (ways[x].nodes[ways[x].nodes.length - 1] == ways[y].nodes[ways[y].nodes.length - 1]) return 2
+			return 0
+		}
+
 		// создаём список точек для геометрии
 		for (a=data[i=0]; i<data.length; a=data[++i])
 		{
 			data[i].geoJSON = []
 			if (a.type == 'relation')
 			{
-				var ref, k, last_node = 0
+				var ref, k, last_node = 0, is_reverse
 				var x = []
+
+				// сортировка веев и разворачивание для правильной геометрии
+				var _members = [], _last = null
+				for (j = 0; j < a.members.length; j++)
+				if (0
+					|| !_last                           // первый вэй оставляем как есть
+					|| a.members[j].role != 'outer')    // и добавляем всё что не outer
+					_members.push(_last = a.members[j])
+				for (j = 0; j < a.members.length; j++)
+				if (a.members[j].role == 'outer')
+				if (is_reverse = is_sibling(_last.ref, a.members[j].ref))
+				{
+					if (is_reverse == 2) ways[a.members[j].ref].nodes.reverse()
+					_members.push(_last = a.members[j])
+					j = 0
+				}
+				a.members = _members
+
+				// теперь перебираем все члены отношения
 				for (j = 0; j < a.members.length; j++)
 				if (a.members[j].role == 'outer')
 				{
 					ref = a.members[j].ref
 					if (!ways[ref]) continue
 
-					// если это первый вэй - смотрим нужно ли повернуть, чтобы стыковался со следующим
-					if (!last_node) // COMMENT: не переворачиваем, если первой ноды нет в следующем вее (значит там последняя)
-					if (a.members[j+1] && ways[a.members[j+1].ref])
-					if (ways[a.members[j+1].ref].nodes.indexOf(ways[ref].nodes[0]) == -1)
-						last_node = ways[ref].nodes[0] // COMMENT: так мы показали, что переворачивать не нужно
-					// определяем, нужно ли повернуть линию или нет
-					if (ways[ref].nodes[0] != last_node)
-						ways[ref].nodes.reverse()
 					for (k = 0; k < ways[ref].nodes.length; k++)
 					{
 						last_node = ways[ref].nodes[k]
