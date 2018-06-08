@@ -13,8 +13,8 @@ init: function(params){
 
 	if (!params.lat && document.location.protocol == 'https:') map.locate()
 
-	L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-		attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>',
+	L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		attribution: '&copy; <a href="http://openstreetmap.org/copyright">OpenStreetMap</a>',
 		maxZoom: 20,
 		maxNativeZoom: 18,
 	}).addTo(map)
