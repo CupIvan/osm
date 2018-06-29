@@ -38,7 +38,8 @@ search: function(filter, handler){
 			+(type.relation?('rel' +f+bounds+';'):'')
 		+');(._;>;);out body;';
 
-	ajax('http://osm.cupivan.ru/overpass/?data='+encodeURIComponent(query), function(x){
+	ajax('http://osm.cupivan.ru/overpass/?data='+encodeURIComponent(query)
+		+'&domain='+encodeURIComponent(window.location.hostname), function(x){
 		var i, j, a, data = []
 		var nodes = ways = {}
 

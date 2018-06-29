@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Карта населённых пунктов</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+
+	<style>
+		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<div id="map"></div>
+
+<script>
+var map = map.init()
+var markers = {}
+
+var g_osm_objects = {}
+
+/** содержимое popup на здании */
+function make_popup(a)
+{
+	var x, st = ''
+
+	if (!a) return
+
+	if (a.tags[x='name']) st += '<b>'+a.tags[x]+'</b><br><br>'
+
+	if (a.tags[x='old_name'])
+		st += 'Прежнее имя: <i>'+a.tags[x].replace(/;/, ', ')+'</i><br>'
+
+	if (a.tags[x='place'])
+		st += 'Категория: <i>'+a.tags[x]+'</i><br>'
+
+	if (a.tags[x='official_status'])
+		st += 'Статус: <i>'+a.tags[x].replace('ru:', '')+'</i><br>'
+
+	if (a.tags[x='addr:region'])
+		st += 'Регион: <i>'+a.tags[x]+'</i><br>'
+
+	if (a.tags[x='population'])
+		st += 'Население: <i>'+a.tags[x]+' ('+(a.tags['population:date']||'год не задан')+')</i><br>'
+
+	if (a.tags['contact:website'] || a.tags['wikipedia'])
+	{
+		st += 'Ссылки:'
+		if (a.tags[x='contact:website']) st += ' <a target="_blank" href="'+a.tags[x]+'">сайт</a>'
+		if (a.tags[x='wikipedia']) st += ' <a target="_blank" href="http://wikipedia.org/wiki/'+a.tags[x]+'">wikipedia</a>'
+		st += '<br>'
+	}
+
+	st += '<br><hr><small>Данные с сайта <a href="'+josm.link(a.id)+'" target="_blank">OpenStreetMap</a>'
+
+	return st;
+}
+
+var g_n, g_nmax
+
+/** основная функция для загрузки и отрисовки геометрии */
+function draw()
+{
+	if (map.getZoom() >= 6)
+	{
+		var i, color, radius, p
+		var a = {'city':0.1,'town':2,'village':4}
+		g_n = g_nmax = 0
+		for (i in a)
+		{
+			if (i == 'town')    if (map.getZoom() <= 7) continue
+			if (i == 'village') if (map.getZoom() <= 8) continue
+			g_nmax++
+			osm.search_region = a[i]
+			osm.search({'place': i, bounds: map.getBounds().toBBoxString().split(','), 'node': true}, function(data){
+				if (g_n < g_nmax) g_n++
+				$('info', 'Данные загружены '+g_n+' / '+g_nmax)
+				if (!data.length) return
+				var i
+				for (i=0; i<data.length; i++)
+				if (!markers[data[i].id])
+				{
+					radius = 2; color = "#999"
+					try{
+						p = data[i].tags['population']
+						if (p >     100) { radius =  3; color = '#555'; }
+						if (p >   10000) { radius =  3; color = '#FAA'; }
+						if (p >  100000) { radius =  6; color = '#7A7'; }
+						if (p >  500000) { radius =  9; color = '#AA5'; }
+						if (p > 1000000) { radius = 12; color = '#F33'; }
+					} catch(e){}
+					markers[data[i].id] = L.circleMarker(data[i], {radius: radius, color: color}).addTo(map).bindPopup(0, { data: data[i] })
+				}
+			})
+		}
+		$('info', 'Загрузка...')
+	} else
+		$('info', 'Для отображения населённых пунктов необходимо увеличить масштаб карты.')
+}
+
+map.on('moveend', draw);
+draw()
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
