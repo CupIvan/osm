@@ -19,7 +19,7 @@ search: function(filter, handler){
 	if (filter[x='node'])     { type[x]=1; delete filter[x] }
 	if (filter[x='way'])      { type[x]=1; delete filter[x] }
 	if (filter[x='relation']) { type[x]=1; delete filter[x] }
-	if (!type.node && !type.way && !type.relation) type = {node:1}
+	if (!type.node && !type.way && !type.relation) type = {nwr:1}
 
 	var i, f=''
 	for (i in filter)
@@ -36,6 +36,7 @@ search: function(filter, handler){
 			+(type.node    ?('node'+f+bounds+';'):'')
 			+(type.way     ?('way' +f+bounds+';'):'')
 			+(type.relation?('rel' +f+bounds+';'):'')
+			+(type.nwr     ?('nwr' +f+bounds+';'):'')
 		+');(._;>;);out body;';
 
 	ajax('http://osm.cupivan.ru/overpass/?data='+encodeURIComponent(query)

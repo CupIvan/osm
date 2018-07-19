@@ -29,15 +29,19 @@ init: function(params){
 		maxNativeZoom: 18,
 	}).addTo(map)
 
-	map.on('popupopen', function(e){ if (make_popup) e.popup.setContent(make_popup(e.popup.options.data)) })
+	map.on('popupopen', function(e){ if (window.make_popup != undefined) e.popup.setContent(window.make_popup(e.popup.options.data)) })
 
-	if (params.update_hash !== false)
 	map.on('moveend', function(){
 		var hash = '?z='+map.getZoom()
 		var a = map.getCenter()
-		hash += '&lat='+a.lat+'&lon='+a.lng
-		hash = '#'+(Math.round(a.lat*a.lat/10+a.lng*a.lng/10))+'/'+hash
-		history.replaceState(null, null, hash);
+
+		// обновляем хэш
+		if (params.update_hash !== false)
+		{
+			hash += '&lat='+a.lat+'&lon='+a.lng
+			hash = '#'+(Math.round(a.lat*a.lat/10+a.lng*a.lng/10))+'/'+hash
+			history.replaceState(null, null, hash);
+		}
 
 		// сохраняем также в localStorage
 		localStorage.setItem('lat', a.lat)

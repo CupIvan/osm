@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Адресный поиск по OSM с точностью до этажа</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+
+	<style>
+		#map  { width: 600px; height: 400px }
+		form  { margin: 10px 0; display: table; }
+		form [type="search"] { width: 100%; }
+		form input { margin: 5px 5px 0 0; padding: 3px; }
+		form [name="housenumber"] { width: 40px; }
+		form [name="flat"]        { width: 60px; }
+		.ref  { box-shadow: none; border: 0; background: none; }
+	</style>
+</head>
+
+<body>
+
+<h1>Поиск квартиры с точностью до этажа по базе OpenStreetMap</h1>
+
+<form onsubmit="search(this); return false">
+	<input name="query" type="search" placeholder="Адрес в свободном формате">
+	<br>Поисковый запрос:<br>
+	<input name="city"        placeholder="город">
+	<input name="street"      placeholder="улица">
+	<input name="housenumber" placeholder="дом">
+	<input name="flat"        placeholder="квартира" type="number">
+	<br>
+	<input type="submit" value="Искать">
+</form>
+
+<div id="map"></div>
+
+<script>
+document.querySelector('[name=street]').value = 'Мончегорская улица'
+document.querySelector('[name=housenumber]').value = '6А к2'
+document.querySelector('[name=flat]').value = '76'
+var map = map.init({update_hash: false})
+var layer = L.layerGroup().addTo(map)
+
+function search(form)
+{
+	var x, query = {}
+	x = 'city';        query[x] = document.querySelector('[name='+x+']').value
+	x = 'street';      query[x] = document.querySelector('[name='+x+']').value
+	x = 'housenumber'; query[x] = document.querySelector('[name='+x+']').value
+	x = 'flat';        query[x] = document.querySelector('[name='+x+']').value
+	x = {'addr:street': query['street']}
+	osm.search(x, function(data){
+		if (!data.length) return alert('Не найдено')
+
+		layer.clearLayers()
+
+		var i, j, a, color, hint, is_display, is_house
+		for (a=data[i=0]; i<data.length; a=data[++i])
+		if (a.tags)
+		{
+			is_display = is_house = false; hint = ''
+
+			is_house = a.tags['addr:housenumber'] == query['housenumber']
+			color    = is_house ? 'red' : 'gray'
+
+			if (is_house)
+				map.setView(a.center, 16)
+
+			if (a.tags['addr:housenumber'])
+			{
+				hint = a.tags['addr:street']+', д. '+a.tags['addr:housenumber']
+				if (a.tags[x='building:levels'])
+					hint += '<br>В доме '+a.tags[x]+' этаж'+ok(a.tags[x], '', 'а', 'ей')
+				is_display = true
+			}
+
+			if (is_display)
+			L.geoJSON(a.geoJSON, {color: color, weight: 2}).bindPopup(hint).addTo(layer)
+
+			if (is_display)
+			for (j = 0; j < a.nodes.length; j++)
+			if (a.nodes[j].tags)
+			if (a.nodes[j].tags['entrance'] == 'staircase')
+			{
+				var h = ''
+				h += (h?'<br>':'')+'<b>Подъезд №'+a.nodes[j].tags['ref']+'</b>'
+				h += (h?'<br>':'')+'Квартиры: '+a.nodes[j].tags['addr:flats']
+
+				if (is_house)
+				{
+					x = a.nodes[j].tags['addr:flats']||''
+					x = x.split('-')
+					x[0]          = parseInt(x[0])
+					x[1]          = parseInt(x[1])
+					query['flat'] = parseInt(query['flat'])
+					var is_entrance = false
+					if (query['flat'] >= x[0] && query['flat'] <= x[1])
+					{
+						is_entrance = true
+						var levels = a.tags['building:levels']
+						x = Math.floor((query['flat'] - x[0]) / (x[1] - x[0]) * (levels - 1)) + 1
+						h += '<br>Всего этажей: '+levels
+						h += '<br>Квартира <b>'+query['flat']+'</b> находится на <u>'+x+' этаже</u>';
+					}
+				}
+
+				if (is_entrance && is_house)
+				L.circleMarker(a.nodes[j], {radius: 8,
+					color: color, weight: 2,
+					fillColor: 'yellow', fillOpacity: 1,
+					})
+					.bindTooltip(a.nodes[j].tags['ref'], {permanent: true, direction: 'center', className: 'ref'})
+					.bindPopup(h).addTo(layer)
+				else
+				L.circleMarker(a.nodes[j], {radius: 3,
+					color:     color, weight: 2,
+					fillColor: color, fillOpacity: 1,
+					}).bindPopup(h).addTo(layer)
+			}
+		}
+	})
+}
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
