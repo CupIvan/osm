@@ -15,13 +15,17 @@
 	<script src="/i/map.js"></script>
 
 	<style>
-		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { width: 20%; height: 100%; position: absolute; left: 0; top: 0; }
+		#map  { width: 80%; height: 100%; position: absolute; left: 20%; top: 0; }
 	</style>
 </head>
 
 <body>
 
-<div id="info"></div>
+<div id="info">
+	<div id="js-route-list"></div>
+	<div id="js-active-route"></div>
+</div>
 <div id="map"></div>
 
 <script src="routes.js"></script>
@@ -30,6 +34,7 @@
 <script>
 var map = map.init({z:12,lat:56.30063432153634,lon:43.92780303955078,update_hash:false})
 var markers = {}
+var polylines = {}
 
 var g_osm_objects = {}
 
@@ -39,14 +44,68 @@ var _get_color = function(x){
 	if (colors_r[x]) return colors_r[x]
 	return colors_r[x] = colors[(colors_n++)%(colors.length)]
 }
+
 var i, j
 for (i in nodes)
-	markers[i] = L.circleMarker({lat:nodes[i].c[0],lon:nodes[i].c[1]}, {radius: 1, color: '#00F'}).addTo(map).bindPopup(nodes[i].n)
+	markers[i] = L.circleMarker({lat:nodes[i].c[0],lon:nodes[i].c[1]}, {radius: 2, color: '#000', weight: 1, fillOpacity: 1}).addTo(map).bindPopup(nodes[i].n)
 for (i in routes)
 {
 	var points = []
 	for (j in routes[i].stops) if (nodes[routes[i].stops[j]]) points.push(nodes[routes[i].stops[j]].c);
-	L.polyline(points, {radius: 1, color: _get_color(i)}).addTo(map).bindPopup('Маршрут: '+j)
+	polylines[i] = L.polyline(points, {radius: 1, weight: 1, color: '#000'}).addTo(map).bindPopup('Маршрут: '+j)
+}
+
+updateRouteList()
+
+function updateRouteList()
+{
+	var i, st = '', refs = {}
+	st += '<option></option>'
+	for (i in routes)
+	if (refs[routes[i].ref] == undefined)
+	{
+		st += '<option value="'+routes[i].ref+'">Маршрут '+routes[i].ref+'</option>'
+		refs[routes[i].ref] = 1
+	}
+	st = '<select onchange="updateActiveRoute(this.value)">'+st+'</select>'
+	document.getElementById('js-route-list').innerHTML = st
+}
+
+function updateActiveRoute(ref)
+{
+	var i, j, st
+	unhighlightRoutes()
+	st = '<h2>Маршрут '+ref+'</h2>'
+	for (i in routes)
+	if (routes[i].ref == ref)
+	{
+		highlightActiveRoute(i)
+		st += '<ol>'
+		for (j in routes[i].stops)
+			st += '<li onmouseover="highlightActiveStop('+routes[i].stops[j]+')">'+nodes[routes[i].stops[j]].n
+		st += '</ol>'
+	}
+	document.getElementById('js-active-route').innerHTML = st
+}
+
+function unhighlightRoutes()
+{
+	var i, j, st
+	for (i in routes)
+	polylines[i].setStyle({color: '#000', weight: 1})
+}
+
+function highlightActiveRoute(x)
+{
+	polylines[x].setStyle({color: '#F00', weight: 2}).bringToFront()
+}
+
+var g_prev_hight = null
+function highlightActiveStop(x)
+{
+	if (g_prev_hight)
+	markers[g_prev_hight]  .setStyle({color: '#000', radius: 2})
+	markers[g_prev_hight=x].setStyle({color: '#F00', radius: 6}).bringToFront()
 }
 
 </script>
