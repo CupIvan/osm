@@ -44,6 +44,7 @@ function getBuildingColor(a)
 	c = color.ok
 	if (!a.tags['building:levels'])  c = color.warn;
 	if (!a.tags['addr:housenumber']) c = color.error;
+	if (a.tags['addr:city'] != 'Зеленоград')
 	if (!a.tags['addr:street'])      c = color.error;
 	if (!a.entrances.length)         c = color.error;
 	return c
@@ -145,6 +146,11 @@ function createEntranceMarker(a)
 		c = color.warn;
 		comment += '<br>Нужно проставить номера квартир <b>addr:flats</b>';
 	}
+	else
+	{
+		c = color.warn;
+		comment += '<br>Нужно проставить номер подъезда <b>ref</b> и номера квартир <b>addr:flats</b>';
+	}
 
 	comment = '<br><i>'+comment+'</i>';
 
@@ -204,15 +210,19 @@ function make_popup(a)
 	else
 		st += 'Этажей: <i>'+a.tags['building:levels']+'</i><br>'
 
-	if (!a.tags['addr:housenumber'])
-		st += 'Укажите номер дома <b>addr:housenumber</b><br>'
-	else
-		st += 'Номер дома: <i>'+a.tags['addr:housenumber']+'</i><br>'
+	if (a.tags['addr:city'])
+		st += 'Город: <i>'+a.tags['addr:city']+'</i><br>'
 
+	if (a.tags['addr:city'] != 'Зеленоград') // у Зеленограда нумерация без улицы
 	if (!a.tags['addr:street'])
 		st += 'Укажите улицу <b>addr:street</b><br>'
 	else
 		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
+
+	if (!a.tags['addr:housenumber'])
+		st += 'Укажите номер дома <b>addr:housenumber</b><br>'
+	else
+		st += 'Номер дома: <i>'+a.tags['addr:housenumber']+'</i><br>'
 
 	if (!a.entrances.length)
 		st += 'В жилом доме не найдено ни одного подъезда!<br>'
@@ -221,7 +231,7 @@ function make_popup(a)
 		st += 'Подъездов '+a.entrances.length+': '
 		a.entrances.sort(function(x,y){ return x.ref - y.ref })
 		for (i=0; i<a.entrances.length; i++)
-			st += '<i title="Подъезд №'+a.entrances[i].ref+'">' + a.entrances[i]['addr:flats'] + '</i> '
+			st += '<i title="Подъезд №'+a.entrances[i].ref+'">' + (a.entrances[i]['addr:flats'] || '?') + '</i> '
 		st += '<br>'
 	}
 
