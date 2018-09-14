@@ -60,7 +60,7 @@ function make_popup(data)
 	if (x = a['contact:vk'])
 	st += '<br>'+tab+'<a href="'+x+'" target="_blank">страница вконтакте</a>'
 
-	st += '<br><hr><small>Данные с сайта <a href="'+josm.link(data.id)+'" target="_blank">OpenStreetMap</a>'
+	st += '<br><hr><small>Данные с сайта <a href="'+osm.link(data.id, data.type)+'" target="_blank">OpenStreetMap</a>'
 
 	return st;
 }

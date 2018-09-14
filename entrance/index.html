@@ -8,8 +8,8 @@
 	<link rel="icon" href="./favicon.ico" type="image/x-icon">
 
 	<script src="/i/ok.js"></script>
-	<script src="/i/josm.js"></script>
 	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
 	<script src="/i/ajax.js"></script>
 	<script src="/i/osm.js"></script>
 	<script src="/i/map.js"></script>
@@ -176,11 +176,9 @@ function createEntranceMarker(a)
 	comment = '<b>'+title+'</b>' + comment;
 
 	if (c != color.ok)
-	{
-		comment += '<br><br>';
-		comment += '<a href="http://level0.osmz.ru/?url=node/'+a.id+'" target="_blank">level0</a>'
 		stat.ne++;
-	}
+
+	comment += osm.editLinks(a)
 
 	var radius = 2
 	if (a.tags.entrance == 'staircase') radius = 5
@@ -235,7 +233,7 @@ function make_popup(a)
 		st += '<br>'
 	}
 
-	st += '<br><small>'+a.type+'#'+a.id+'</small>'
+	st += osm.editLinks(a)
 
 	return st;
 }

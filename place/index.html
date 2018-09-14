@@ -8,8 +8,8 @@
 	<link rel="icon" href="./favicon.ico" type="image/x-icon">
 
 	<script src="/i/ok.js"></script>
-	<script src="/i/josm.js"></script>
 	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
 	<script src="/i/ajax.js"></script>
 	<script src="/i/osm.js"></script>
 	<script src="/i/map.js"></script>
@@ -65,7 +65,7 @@ function make_popup(a)
 		st += '<br>'
 	}
 
-	st += '<br><hr><small>Данные с сайта <a href="'+josm.link(a.id)+'" target="_blank">OpenStreetMap</a>'
+	st += osm.editLinks(a)
 
 	return st;
 }

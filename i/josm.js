@@ -1,4 +1,7 @@
 var josm = {
+	version: false, // версия JOSM
+	running: false, // запущен ли редактор
+
 	/** иконка со ссылкой на объект */
 	icon: function(id, type)
 	{
@@ -16,22 +19,30 @@ var josm = {
 			'</a>'
 	},
 	/** ссылка на объект */
-	link: function(id, type)
+	link: function(a)
 	{
-		if (!type) type = josm.getType(id)
-		return 'http://www.openstreetmap.org/browse/'+type+'/'+id
-	},
-	/** тип объекта */
-	getType: function(id)
-	{
-		var type; id += ''
-
-		if (id.charAt(0) == 'n') type = 'node'
-		if (id.charAt(0) == 'w') type = 'way'
-		if (id.charAt(0) == 'r') type = 'relation'
-
-		id = id.replace(/\D/g, '')
-		if (!type) type = 'node'
-		return type
+		var type = a.type
+		if (!type) type = osm.getType(a.id)
+		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id
 	},
 }
+
+/** проверка запущен JOSM или нет */
+setInterval(x=function(){
+	if (window.ajax)
+	window.ajax('http://127.0.0.1:8111/version', function(a){
+		josm.running = false
+		if (a.protocolversion)
+		{
+			josm.running = true
+			josm.version = a.protocolversion.major+'.'+a.protocolversion.minor
+		}
+	})
+}, 10000)
+x()
+
+window.$(function() {
+	var div = document.createElement('div')
+	div.innerHTML = '<iframe name="josm" style="display: none"></iframe>'
+	document.body.appendChild(div)
+})

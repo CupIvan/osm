@@ -1,6 +1,7 @@
 var osm = {
 search_region: 60, // коэффициент округления координат (чем меньше - тем больший регион скачивается)
 
+/** поиск объектов в OSM базе */
 search: function(filter, handler){
 	var bounds = ''
 	if (filter.bounds)
@@ -165,6 +166,38 @@ search: function(filter, handler){
 
 		handler(data)
 	})
+},
+
+/** ссылка на объект */
+link: function(id, type)
+{
+	if (!type) type = josm.getType(id)
+	return 'http://www.openstreetmap.org/browse/'+type+'/'+id
+},
+/** тип объекта */
+getType: function(id)
+{
+	var type; id += ''
+
+	if (id.charAt(0) == 'n') type = 'node'
+	if (id.charAt(0) == 'w') type = 'way'
+	if (id.charAt(0) == 'r') type = 'relation'
+
+	id = id.replace(/\D/g, '')
+	if (!type) type = 'node'
+	return type
+},
+
+/** ссылки на редактирование */
+editLinks: function(a)
+{
+	var st = ''
+	st +='<hr><small>'
+	st += '<a target="_blank" href="'+osm.link(a.id, a.type)+'">Открыть в OSM</a>'
+	if (josm.running)
+	st += '   <a target="josm" href="'+josm.link(a)+'">Загрузить в JOSM</a>'
+	st += '   <a target="_blank" href="http://level0.osmz.ru/?url='+a.type+'/'+a.id+'">Открыть в level0</a>'
+	return st
 }
 
 }

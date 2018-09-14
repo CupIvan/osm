@@ -8,8 +8,8 @@
 	<link rel="icon" href="./favicon.ico" type="image/x-icon">
 
 	<script src="/i/ok.js"></script>
-	<script src="/i/josm.js"></script>
 	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
 	<script src="/i/ajax.js"></script>
 	<script src="/i/osm.js"></script>
 	<script src="/i/map.js"></script>
@@ -81,7 +81,7 @@ function make_popup(a)
 	if (a.tags['addr:street'])
 		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
 
-	st += '<br><small>#'+a.id+'</small>'
+	st += osm.editLinks(a)
 
 	return st;
 }
