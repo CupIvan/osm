@@ -37,6 +37,6 @@ if (empty($page))
 
 $log .= " - $fname - $data\n";
 
-@file_put_contents('./cache/'.date('Y-m-d').'.log', $log, FILE_APPEND);
+@file_put_contents('./cache/_'.date('Y-m-d').'.log', $log, FILE_APPEND);
 
 echo $page;

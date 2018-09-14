@@ -120,11 +120,12 @@ search: function(filter, handler){
 					ref = a.members[j].ref
 					if (!ways[ref]) continue
 
+					// COMMENT: если узел уже есть в списке, то его пропускаем, чтобы не было дубликатов точек в линии
 					for (k = 0; k < ways[ref].nodes.length; k++)
 					{
 						last_node = ways[ref].nodes[k]
-						if (x.indexOf(last_node) == -1)
-							x.push(last_node)
+						if (x.map(function(x){ return x.id }).indexOf(last_node) == -1)
+							x.push(nodes[last_node])
 					}
 				} else
 				if (a.members[j].role == 'part')
@@ -137,7 +138,9 @@ search: function(filter, handler){
 				}
 
 				data[i].nodes = x
+				if (!data[i].geoJSON.length) data[i].geoJSON.push(_coords(x))
 			}
+
 			if (a.type == 'way' || a.type == 'relation')
 			{
 				x=[]; data[i].center=[0, 0]
@@ -148,12 +151,15 @@ search: function(filter, handler){
 					data[i].center[0] += nodes[data[i].nodes[j]].lat
 					data[i].center[1] += nodes[data[i].nodes[j]].lon
 				}
-				data[i].nodes = x
 				data[i].center[0] /= x.length
 				data[i].center[1] /= x.length
-
 				data[i].geo = _coords(data[i].nodes)
-				data[i].geoJSON.push(data[i].geo)
+
+				if (a.type == 'way')
+				{
+					data[i].nodes = x
+					data[i].geoJSON.push(data[i].geo)
+				}
 			}
 			if (a.type == 'node')
 				data[i].center = [a.lat, a.lon]
