@@ -27,7 +27,7 @@ if (empty($page))
 		'http://overpass.openstreetmap.ru/cgi/interpreter',
 	];
 	if (strpos($_SERVER['HTTP_HOST'], '_.osm') !== false)
-		$servers = ['http://osm.cupivan.ru/overpass'];
+		$servers = ['https://osm.cupivan.ru/overpass'];
 	$server = $servers[mt_rand(0, count($servers)-1)];
 	$url  = "$server/?data=".urlencode($data);
 	$page = @file_get_contents($url);

@@ -23,7 +23,7 @@ init: function(params){
 
 	if (!params.lat && document.location.protocol == 'https:') map.locate()
 
-	L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		attribution: '&copy; <a href="http://openstreetmap.org/copyright">OpenStreetMap</a>',
 		maxZoom: 20,
 		maxNativeZoom: 18,

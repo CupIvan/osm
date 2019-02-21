@@ -40,7 +40,7 @@ search: function(filter, handler){
 			+(type.nwr     ?('nwr' +f+bounds+';'):'')
 		+');(._;>;);out body;';
 
-	ajax('http://osm.cupivan.ru/overpass/?data='+encodeURIComponent(query)
+	ajax('https://osm.cupivan.ru/overpass/?data='+encodeURIComponent(query)
 		+'&domain='+encodeURIComponent(window.location.hostname), function(x){
 		var i, j, a, data = []
 		var nodes = ways = {}
