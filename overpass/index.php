@@ -20,14 +20,16 @@ if (file_exists($fname) && filemtime($fname) > time() - 2*3600)
 
 if (empty($page))
 {
-	@file_put_contents($fname, '{}');
 	$servers = [
 		'https://lz4.overpass-api.de/api/interpreter',
 		'https://z.overpass-api.de/api/interpreter',
-		'http://overpass.openstreetmap.ru/cgi/interpreter',
+		'http://overpass.openstreetmap.fr/api/interpreter',
+		'https://overpass.kumi.systems/api/interpreter',
 	];
 	if (strpos($_SERVER['HTTP_HOST'], '_.osm') !== false)
 		$servers = ['https://osm.cupivan.ru/overpass'];
+	else
+		@file_put_contents($fname, '{}');
 	$server = $servers[mt_rand(0, count($servers)-1)];
 	$url  = "$server/?data=".urlencode($data);
 	$page = @file_get_contents($url);

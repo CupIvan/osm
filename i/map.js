@@ -1,10 +1,10 @@
 if (!window.L)
 {
 	document.write(''
-		+'<l'+'ink rel="stylesheet" href="https://unpkg.com/leaflet@1.3.1/dist/leaflet.css"'
-			+'integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ==" crossorigin=""/>'
-		+'<s'+'cript src="https://unpkg.com/leaflet@1.3.1/dist/leaflet.js"'
-			+'integrity="sha512-/Nsx9X4HebavoBvEBuyp3I7od5tA0UzAxs+j83KgC8PU0kgB4XiK4Lfe4y4cgBtaRJQEIFCW+oC506aPT2L1zw==" crossorigin=""></scrip'+'t>'
+		+'<l'+'ink rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css"'
+			+'integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==" crossorigin=""/>'
+		+'<s'+'cript src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js"'
+			+'integrity="sha512-QVftwZFqvtRNi0ZyCtsznlKSWOStnDORoefr1enyq5mVL4tmKB3S/EnC3rRJcxCPavG10IcrVGSmPh6Qw5lwrg==" crossorigin=""></scrip'+'t>'
 	)
 }
 
@@ -34,6 +34,11 @@ init: function(params){
 	map.on('moveend', function(){
 		var hash = '?z='+map.getZoom()
 		var a = map.getCenter()
+
+		// коррекция долготы для углов > 360 градусов
+		var lng = a.lng % 360
+		if (lng > 180) lng -= 180
+		a.lng = lng
 
 		// обновляем хэш
 		if (params.update_hash !== false)
