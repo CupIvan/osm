@@ -8,8 +8,8 @@
 	<link rel="icon" href="./favicon.ico" type="image/x-icon">
 
 	<script src="/i/ok.js"></script>
-	<script src="/i/josm.js"></script>
 	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
 	<script src="/i/ajax.js"></script>
 	<script src="/i/osm.js"></script>
 	<script src="/i/map.js"></script>
@@ -41,40 +41,79 @@ function str_replace(x, from, to)
 /** содержимое popup */
 function make_popup(data)
 {
-	var x, st = '', tab = '    • ', a = data.tags
-
-	st += '<h2>'+a.name+'</h2>'
-	if (x = a['opening_hours'])
+	var st = ''
+	if (data.tags)
 	{
-		var i, time = ''
-		x = str_replace(x, ['Mo','Tu','We','Th','Fr','Sa','Su','-'], ['Пн','Вт','Ср','Чт','Пт','Сб','Вс',' – ']).split(';')
-		for (i=0; i<x.length; i++)
-			time += '<br>'+tab+'<b style="display: inline-block; width: 60px">'+x[i].replace(/(\D) (\d)/, '$1</b> $2')
-		st += 'Время работы:'+time
+		var x, tab = '    • ', a = data.tags
+
+		st += '<h2>'+a.name+'</h2>'
+		if (x = a['opening_hours'])
+		{
+			var i, time = ''
+			x = str_replace(x, ['Mo','Tu','We','Th','Fr','Sa','Su','-','Off'], ['Пн','Вт','Ср','Чт','Пт','Сб','Вс',' – ','выходной']).split(';')
+			for (i=0; i<x.length; i++)
+				time += '<br>'+tab+'<b style="display: inline-block; width: 60px">'+x[i].replace(/(\D) (\d|вых)/, '$1</b> $2')
+			st += 'Время работы:'+time
+		}
+		if (x = a['contact:phone']) st += '<br>Телефон:<br>'+tab+'<a href="tel:'+x.replace(/[^\d\+]/g, '')+'">'
+			+ x.replace(/[^\d\+]/g, '').replace(/(\+.)(...)(...)(..)(..)/, '$1 ($2) $3-$4-$5')+'</a>'
+		st += '<br><br>Ссылки:'
+		if (x = a['contact:website'])
+		st += '<br>'+tab+'<a href="'+x+'" target="_blank">официальная страница</a>'
+		if (x = a['contact:vk'])
+		st += '<br>'+tab+'<a href="'+x+'" target="_blank">страница вконтакте</a>'
+
+		st += '<br><hr><small>Данные с сайта <a href="'+osm.link(data.id, data.type)+'" target="_blank">OpenStreetMap</a>'
+		if (josm.running)
+		st += '   <a target="josm" href="'+josm.link(data)+'">Загрузить в JOSM</a>'
 	}
-	if (x = a['contact:phone']) st += '<br>Телефон:<br>'+tab+'<a href="tel:'+x.replace(/[^\d\+]/g, '')+'">'
-		+ x.replace(/[^\d\+]/g, '').replace(/(\+.)(...)(...)(..)(..)/, '$1 ($2) $3-$4-$5')+'</a>'
-	st += '<br><br>Ссылки:'
-	if (x = a['contact:website'])
-	st += '<br>'+tab+'<a href="'+x+'" target="_blank">официальная страница</a>'
-	if (x = a['contact:vk'])
-	st += '<br>'+tab+'<a href="'+x+'" target="_blank">страница вконтакте</a>'
-
-	st += '<br><hr><small>Данные с сайта <a href="'+osm.link(data.id, data.type)+'" target="_blank">OpenStreetMap</a>'
-
+	if (data.hqs)
+	{
+		a = data
+		st += '<h2>'+a.city+'</h2>'
+		st += 'Адрес: '+data.hqs[0].address
+		st += '<br>'+data.hqs[0].person
+		st += '<br><br><a href="https://shtab.navalny.com'+data.hqs[0].page+'">официальная страница</a>'
+		st += '<br><hr><small>Данные с сайта <a href="https://shtab.navalny.com" target="_blank">shtab.navalny.com</a>'
+	}
 	return st;
+}
+
+var stat={n:0,osm_open:0,osm_close:0}
+
+function hint()
+{
+	$('info', 'Всего в России '+stat.n+' штаб'+ok(stat.n, '', 'а', 'ов')
+		+', в OSM '+stat.osm_open+', закрыт'+ok(stat.osm_close, '', 'о', 'о')+' '+stat.osm_close)
 }
 
 /** основная функция для загрузки и отрисовки геометрии */
 function init()
 {
+	ajax('map.php', function(a){
+		var i, j
+		var add_point = function(a){
+			L.circleMarker([a.coords[1], a.coords[0]], {radius: a.opened?10:5, color: "#55F"}).addTo(map).bindPopup(0, { data: a })
+			stat.n++
+		}
+		for (i in a)
+		for (j=0;j<a[i].length;j++)
+			add_point(a[i][j])
+		hint()
+	})
 	osm.search({'name': 'Штаб Алексея Навального', 'node': true}, function(data){
 		if (!data.length) return $('info', 'Нет данных')
 		$('info', 'Данные загружены')
 		var i
 		for (i=0; i<data.length; i++)
-			L.circleMarker(data[i], {radius: 5, color: data[i].disused ? "#777" : "#F55"}).addTo(map).bindPopup(0, { data: data[i] })
-		$('info', 'Всего найден'+ok(i,'','о','о')+' '+i+' штаб'+ok(i, '', 'а', 'ов')+' в мире')
+		{
+			L.circleMarker(data[i], {radius: 5, color: data[i].tags.disused == 'yes' ? "#777" : "#F55"}).addTo(map).bindPopup(0, { data: data[i] })
+			if (data[i].tags.disused == 'yes')
+				stat.osm_close++
+			else
+				stat.osm_open++
+		}
+		hint()
 	})
 
 	$('info', 'Загрузка...')
