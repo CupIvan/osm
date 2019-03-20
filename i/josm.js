@@ -25,6 +25,16 @@ var josm = {
 		if (!type) type = osm.getType(a.id)
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id
 	},
+	// https://josm.openstreetmap.de/wiki/Help/RemoteControlCommands
+	/** ссылка на изменение параметров */
+	link_edit: function(a, params)
+	{
+		var type = a.type
+		if (!type) type = osm.getType(a.id)
+		var i, tags = ''
+		for (i in params) tags += (tags?'%7C':'')+i+'='+encodeURIComponent(params[i])
+		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id+'&addtags='+tags
+	},
 }
 
 /** проверка запущен JOSM или нет */
@@ -39,7 +49,7 @@ setInterval(x=function(){
 		}
 	})
 }, 10000)
-x()
+setTimeout(x, 2000)
 
 window.$(function() {
 	var div = document.createElement('div')

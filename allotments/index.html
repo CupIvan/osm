@@ -33,15 +33,15 @@ osm.search_region = 100
 var map = map.init()
 
 /** содержимое popup на здании */
-function make_popup(a)
+function make_popup(a, marker)
 {
 	var x, st = ''
 
-	if (a.tags[x='official_short_type'])
-		st += '<b>'+a.tags[x]+'</b> '
-
-	if (a.tags[x='name'])
-		st += '<b>'+(st?'"':'')+a.tags[x]+(st?'"':'')+'</b><br>'
+	if (a.tags['name'])
+	{
+		if (a.tags[x='official_short_type']) st += '<b>'+a.tags[x]+'</b> '
+		st += '<b>'+(st?'«':'')+a.tags['name']+(st?'»':'')+'</b><br>'
+	}
 
 	if (a.tags[x='error'])
 		st += '<b style="color: red">'+a.tags[x]+'</b><br>'
@@ -55,7 +55,16 @@ function make_popup(a)
 	if (a.tags[x='contact:website'])
 		st += 'Сайт: <a href="'+a.tags[x]+'" target="_blank">'+a.tags[x]+'</a><br>'
 
-	st += osm.editLinks(a)
+	var re, params = null
+	if (re = /^([А-Я]+|с\/т) /.exec(a.tags.name))
+	{
+		var t = re[1]; if (t == 'с/т') t = 'СТ'
+		var name = a.tags.name.replace(t, '').replace(/^\s+|\s+$/g, '').replace(/^["«']|["»']$/g, '')
+		params = {official_short_type: t, name: name}
+		params.onedit = function(){ marker.setRadius(3) }
+	}
+
+	st += osm.editLinks(a, params)
 
 	return st;
 }
@@ -77,7 +86,7 @@ function draw()
 				if (!a.tags.name)
 				{ color = 'yellow'; a.tags.warning += 'Садовое товарищество без названия<br>'; }
 				else
-				if (re = /^([А-Я]+) /.exec(a.tags.name))
+				if (re = /^([А-Я]+|с\/т) /.exec(a.tags.name))
 				{ color = 'red'; a.tags.warning += 'В названии пишите только имя, тип укажите в теге <i>official_short_type='+re[1]+'</i><br>'; }
 				else
 				if (a.tags.name.indexOf('"') != -1 ||

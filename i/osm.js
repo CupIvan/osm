@@ -198,15 +198,27 @@ getType: function(id)
 },
 
 /** ссылки на редактирование */
-editLinks: function(a)
+editLinks: function(a, params)
 {
 	var st = ''
 	st +='<hr><small>'
 	st += '<a target="_blank" href="'+osm.link(a.id, a.type)+'">Открыть в OSM</a>'
 	if (josm.running)
-	st += '   <a target="josm" href="'+josm.link(a)+'">Загрузить в JOSM</a>'
+	{
+		st += '   <a target="josm" href="'+josm.link(a)+'">Загрузить в JOSM</a>'
+		if (params)
+		{
+			if (params.onedit) this.onedit = params.onedit
+			delete params.onedit
+			st += ' (<a target="josm" href="'+josm.link_edit(a, params)+'" onclick="osm.onEdit()">Правка</a>)'
+		}
+	}
 	st += '   <a target="_blank" href="http://level0.osmz.ru/?url='+a.type+'/'+a.id+'">Открыть в level0</a>'
 	return st
-}
+},
+onEdit: function()
+{
+	this.onedit()
+},
 
 }

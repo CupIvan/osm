@@ -29,7 +29,7 @@ init: function(params){
 		maxNativeZoom: 18,
 	}).addTo(map)
 
-	map.on('popupopen', function(e){ if (window.make_popup != undefined) e.popup.setContent(window.make_popup(e.popup.options.data)) })
+	map.on('popupopen', function(e){ if (window.make_popup != undefined) e.popup.setContent(window.make_popup(e.popup.options.data, e.popup._source)) })
 
 	map.on('moveend', function(){
 		var hash = '?z='+map.getZoom()
