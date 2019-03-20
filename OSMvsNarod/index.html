@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Сравнение карты OSM с народной картой Яндекса</title>
+	<meta charset="utf-8"/>
+	<style>
+		html, body { margin: 0; padding: 0; height: 100%; }
+		table { width: 100%; height: 100%; border-collapse: collapse; }
+		#header { padding: 10px; text-align: center; vertical-align: middle; }
+		#search { width: 400px; }
+		#map1, #map2 { height: 100%; width: 50%; }
+
+		#maps_links img { height: 20px; }
+
+		#wiki_coords { font: 10px monospace; white-space: pre; cursor: pointer; }
+
+		#map2 { position: relative; }
+		#marker_center { position: absolute; z-index: 99; left: 50%; top: 50%; margin-left: -11px; display: none; }
+		#marker_center:before, #marker_center:after { content: ''; display: block; width: 10px; height: 10px; border: 1px solid #000; }
+		#marker_center:before { border-width: 0 1px 1px 0; }
+		#marker_center:after  { border-width: 1px 0 0 1px; position: absolute; left: 10px; top: 10px; }
+
+		.olControlAttribution { bottom: 0 !important; right: 0 !important;
+			padding: 2px 5px; background: rgba(0,0,0,0.2); font: 10px Arial !important; }
+	</style>
+	<script src="/i/lib.js"></script>
+	<script src="http://api-maps.yandex.ru/2.0/?load=package.full&lang=ru-RU"></script>
+
+<script>
+var map1, map2, f, map1col, map2col;
+var params = {};
+
+function s(x, v){ return localStorage[x] = params[x] = v; }
+function g(x)   { return localStorage[x]; }
+function p(x)   { var re = (new RegExp(x+'=([^&]+)')).exec(document.location+''); return re ? re[1] : null; }
+
+// функциия сохранения и восстановления координат в кеше
+function getCoords()  { return {lat: p('lat') || g('lat') || 55.74954, lon: p('lon') || g('lon') || 37.621587, zoom: p('zoom') || g('zoom') || 10}; }
+function saveCoords() { var c = map1.getCenter(); s('lat', c[0]); s('lon', c[1]); s('zoom', map1.getZoom()); updateUrl(); }
+
+// обновление url
+function updateUrl()
+{
+	var i, url = '';
+	for (i in params) if (params[i]) url += (url ? '&' : '') + i + '=' + params[i];
+	if (!url) return;
+	document.location = '#?' + url;
+
+	// координаты в wiki-формате
+	if (params.lat && $('wiki_coords').innerHTML.indexOf('lat') != -1)
+	{
+		var n, x, st = '';
+		st += '<br>';
+		st += 'Координаты центра карты (для точности включите самый большой масштаб)';
+		st += '<br> ';
+		x = params.lat; n = Math.floor(x);
+		st += ' |lat_deg = '+(n<10?'0'+n:n); x = (x-n)*60; n = Math.floor(x);
+		st += ' |lat_min = '+(n<10?'0'+n:n); x = (x-n)*60; n = Math.floor(x);
+		st += ' |lat_sec = '+(n<10?'0'+n:n);
+		st += '<br> ';
+		x = params.lon; n = Math.floor(x);
+		st += ' |lon_deg = '+(n<10?'0'+n:n); x = (x-n)*60; n = Math.floor(x);
+		st += ' |lon_min = '+(n<10?'0'+n:n); x = (x-n)*60; n = Math.floor(x);
+		st += ' |lon_sec = '+(n<10?'0'+n:n);
+		$('wiki_coords', st);
+	}
+}
+
+function layer(url) {
+	return new ymaps.Layer(
+		function(c,z){
+			return 'http://'+(['a','b','c'][Math.round(Math.random()*2)])+
+			'.'+url+'/'+z+'/'+c[0]+'/'+c[1]+'.png'
+		},
+		{
+			projection: ymaps.projection.sphericalMercator,
+			tileTransparent: true
+		}
+	);
+}
+
+function layerBing() {
+	return new ymaps.Layer(
+		function(c,z){
+			var quad = '', x = c[0], y = c[1], digit, mask;
+			for (var i = z; i > 0; i--) {
+				digit = 0;
+				mask = 1 << (i - 1);
+				if ((x & mask) != 0) digit += 1;
+				if ((y & mask) != 0) digit += 2;
+				quad = quad + digit;
+			}
+			return 'http://ecn.dynamic.t'+(Math.round(Math.random()*3))+'.tiles.virtualearth.net/comp/ch'+
+			'/'+quad+'?mkt=en-us&it=A,G,L&shading=hill&n=z'
+		},
+		{
+			projection: ymaps.projection.sphericalMercator,
+			tileTransparent: true
+		}
+	);
+}
+
+ymaps.ready(function () {
+	var c = getCoords(), t, oldLayer = 0;
+
+	var layerSelector = new ymaps.control.TypeSelector([]);
+	layerSelector.addMapType(t = new ymaps.MapType('OpenStreetMap', layer('tile.openstreetmap.org')));
+	layerSelector.addMapType(    new ymaps.MapType('Транспорт',     layer('tile2.opencyclemap.org/transport')));
+	layerSelector.addMapType(    new ymaps.MapType('Велокарта',     layer('tile.opencyclemap.org/cycle')));
+	layerSelector.addMapType(    new ymaps.MapType('Bing',          layerBing()));
+
+	map1 = new ymaps.Map("map1", {center: [c.lat, c.lon], zoom: c.zoom, type: "yandex#publicMap", behaviors: ['default', 'scrollZoom']});
+	map2 = new ymaps.Map("map2", {center: [c.lat, c.lon], zoom: c.zoom, type: null, behaviors: ['default', 'scrollZoom']}, {maxZoom: 18});
+
+	map1col = new ymaps.GeoObjectCollection();
+	map2col = new ymaps.GeoObjectCollection();
+
+	map2.events.add("typechange",
+	function(x){
+		if (oldLayer) map2.layers.remove(oldLayer);
+		map2.layers.add(oldLayer = x.get('newType').getLayers());
+	});
+	map2.setType(t);
+
+	// ставим маркер, если нужно
+	if (p('marker'))
+	{
+		map1.geoObjects.add(new ymaps.Placemark([p('lat'), p('lon')]));
+		map2.geoObjects.add(new ymaps.Placemark([p('lat'), p('lon')]));
+	}
+
+	map1.controls.add("mapTools").add("zoomControl").add("typeSelector");
+	map2.controls.add("mapTools").add("zoomControl").add(layerSelector);
+
+	map1.events.add("boundschange", function(e){ if (!f) { f = 1; map2.setBounds(map1.getBounds()); f = 0; saveCoords(); } });
+	map2.events.add("boundschange", function(e){ if (!f) { f = 1; map1.setBounds(map2.getBounds()); f = 0; saveCoords(); } });
+
+	// поиск по названию в url
+	var S = p('q');
+	if (S)
+	{
+		if (S.indexOf('%') != -1)
+			S = decodeURIComponent(S);
+		$('search').value = params.q = S;
+		search(S, p('lat') ? true : false );
+	}
+});
+
+var tmr;
+function search(x, noZoom)
+{
+	if (tmr) clearInterval(tmr);
+	tmr = setTimeout(function(){
+		var t;
+		params.q = x;
+
+		// поиск по OSM
+		window[t = 'osm_search'+Math.round(Math.random()*9999999)] = function(x){
+			map2col.removeAll();
+			if (!x.matches) return;
+			var i;
+			for (i in x.matches)
+				map2col.add(new ymaps.Placemark([x.matches[i].lat, x.matches[i].lon]));
+			map2.geoObjects.add(map2col);
+			if (noZoom) return;
+			f = 1; map2.setBounds(map2col.getBounds()); f = 0;
+		}
+		ajax.loadJS('http://openstreetmap.ru/api/search?callback='+t+
+			'&q='+encodeURIComponent(x)+'&email=cupivan@narod.ru&from=OSMvsNarod');
+
+		// поиск по Я.Карте
+		ymaps.geocode(x, {results: 10}).then(function (res) {
+			map1col.removeAll();
+			map1col = res.geoObjects;
+			map1.geoObjects.add(map1col);
+			if (noZoom) return;
+			map1.setBounds(map1col.getBounds());
+			if (map1.getZoom() > 18) map1.setZoom(18);
+		});
+
+	}, 500);
+}
+
+/** открыть карту в другом месте */
+function mapTo(x)
+{
+	var map = (''+x.href).replace(/.+#/, '');
+	switch (map)
+	{
+		case 'osm':
+			x.href = 'http://osm.org.ru?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
+			break;
+		case 'ymap':
+			x.href = 'http://maps.yandex.ru/?ll='+(''+map1.getCenter()).replace(/(.+),(.+)/, '$2%2C$1')+'&z='+map1.getZoom();
+			break;
+		case 'josm':
+			var bbox = (''+map1.getBounds()).replace(/(.+),(.+),(.+),(.+)/, 'left=$2&bottom=$1&right=$4&top=$3');
+			frame.location = 'http://localhost:8111/load_and_zoom?'+bbox;
+			return false;
+		case 'geocoder':
+			x.href = '/latlon.html#?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
+			break;
+	}
+}
+
+</script>
+</head>
+
+<body>
+	<table>
+	<tr><td id="header" colspan="2">
+		<input id="search" placeholder="Поиск..." onkeyup="search(this.value)">
+		<span id="maps_links">
+			<a href="#osm"  title="Открыть карту на OpenStreetMap" target="_blank" onclick="return mapTo(this)"><img src="http://osm.org.ru/favicon.png"></a>
+			<a href="#ymap" title="Открыть карту в Яндекс.Картах"  target="_blank" onclick="return mapTo(this)"><img src="http://maps.yandex.ru/favicon.ico"></a>
+			 
+			<a href="#josm" title="Открыть карту в JOSM" onclick="return mapTo(this)"><img src="http://josm.openstreetmap.de/favicon.ico"></a>
+			<a href="#geocoder" title="Открыть место в геокодере" onclick="return mapTo(this)"><img src="http://josm.openstreetmap.de/favicon.ico"></a>
+		</span>
+			 
+		<span id="wiki_coords" onclick="this.innerHTML='lat'; this.style.cursor='auto'; $('marker_center').style.display='block'; saveCoords();">[ wiki-градус ]</span>
+	</td></tr>
+	<tr>
+		<td id="map2"><div id="marker_center"></div></td>
+		<td id="map1"></td>
+	</tr>
+	</table>
+
+	<iframe id="frame" style="display: none"></iframe>
+
+	<!-- Yandex.Metrika counter --><script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+</body>
+</html>
