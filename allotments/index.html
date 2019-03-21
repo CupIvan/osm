@@ -64,6 +64,14 @@ function make_popup(a, marker)
 	{
 		st += 'Другое название: <b>'+a.tags[x]+'</b><br>'
 	}
+	if (a.tags[x='old_name'])
+	{
+		st += 'Предыдущее название: <b>'+a.tags[x]+'</b><br>'
+	}
+	if (a.tags[x='alt_name'])
+	{
+		st += 'Другое название: <b>'+a.tags[x]+'</b><br>'
+	}
 
 	if (a.tags[x='error'])
 		st += '<b style="color: red">'+a.tags[x]+'</b><br>'

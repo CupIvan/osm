@@ -189,7 +189,7 @@ function createEntranceMarker(a)
 	var marker = L.circle([a.lat, a.lon], radius, { color: c, weight: 2, fillColor: c, fillOpacity: 0.5, pane: 'circlePane' })
 		.addTo(map)
 		.bindPopup(comment);
-	if (a.tags.ref && stat.n_ref++ < 300)
+	if (a.tags.ref && stat.n_ref++ < 500)
 		marker.bindTooltip(a.tags.ref, {permanent: true, direction: 'center', className: 'ref'})
 
 	return marker
