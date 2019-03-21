@@ -42,6 +42,14 @@ function make_popup(a, marker)
 		if (a.tags[x='official_short_type']) st += '<b>'+a.tags[x]+'</b> '
 		st += '<b>'+(st?'«':'')+a.tags['name']+(st?'»':'')+'</b><br>'
 	}
+	if (a.tags[x='old_name'])
+	{
+		st += 'Предыдущее название: <b>'+a.tags[x]+'</b><br>'
+	}
+	if (a.tags[x='alt_name'])
+	{
+		st += 'Другое название: <b>'+a.tags[x]+'</b><br>'
+	}
 
 	if (a.tags[x='error'])
 		st += '<b style="color: red">'+a.tags[x]+'</b><br>'
@@ -86,7 +94,7 @@ function draw()
 				if (!a.tags.name)
 				{ color = 'yellow'; a.tags.warning += 'Садовое товарищество без названия<br>'; }
 				else
-				if (re = /^([А-Я]+|с\/т) /.exec(a.tags.name))
+				if (!a.tags['official_short_type'] && (re = /^([А-Я]+|с\/т) /.exec(a.tags.name)))
 				{ color = 'red'; a.tags.warning += 'В названии пишите только имя, тип укажите в теге <i>official_short_type='+re[1]+'</i><br>'; }
 				else
 				if (a.tags.name.indexOf('"') != -1 ||
