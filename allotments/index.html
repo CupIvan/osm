@@ -39,10 +39,7 @@ function make_popup(a, marker)
 	var x, st = ''
 
 	if (a.tags['name'])
-	{
-		if (a.tags[x='official_short_type']) st += '<b>'+a.tags[x]+'</b> '
-		st += '<b>'+(st?'«':'')+a.tags['name']+(st?'»':'')+'</b><br>'
-	}
+		st += '<b>'+a.tags['name']+'</b><br>'
 	if (a.tags[x='old_name'])
 	{
 		st += 'Предыдущее название: <b>'+a.tags[x]+'</b><br>'
@@ -65,11 +62,18 @@ function make_popup(a, marker)
 		st += 'Сайт: <a href="'+a.tags[x]+'" target="_blank">'+a.tags[x]+'</a><br>'
 
 	var re, params = null
-	if (re = /^([А-Я]+|с\/т) /.exec(a.tags.name))
+	re = /^([А-Я]+|с\/т) /.exec(a.tags.name)
 	{
-		var t = re[1]; if (t == 'с/т') t = 'СТ'
-		var name = a.tags.name.replace(t, '').replace(/^\s+|\s+$/g, '').replace(/^["«']|["»']$/g, '')
-		params = {official_short_type: t, name: name}
+		var t = re?re[1]:''; if (t == 'с/т') t = 'СТ'
+		var ost = 'official_short_type'
+		if (a.tags[ost]) t = a.tags[ost]
+		var name = (''+a.tags.name).replace(t, '').replace(/^\s+|\s+$/g, '').replace(/^["«']|["»']$/g, '')
+		name = name.replace('им.', 'имени')
+		if (name.indexOf('имени') != 0 && name.indexOf('№') != 0)
+		name = '«'+name+'»'
+		if (t) name = t+' '+name
+		params = {name: name}
+		if (a.tags[ost]) params[ost] = ''
 		params.onedit = function(){ marker.setRadius(3) }
 	}
 
@@ -92,15 +96,40 @@ function draw()
 			for (a=data[i=0]; i<data.length; a=data[++i])
 			{
 				color = 'blue'; a.tags.error = ''; a.tags.warning = ''
+				if (a.tags.name && a.tags.name.indexOf('№') != -1) color = '#77F'
 				if (!a.tags.name)
 				{ color = 'yellow'; a.tags.warning += 'Садовое товарищество без названия<br>'; }
 				else
-				if (!a.tags['official_short_type'] && (re = /^([А-Я]+|с\/т) /.exec(a.tags.name)))
-				{ color = 'red'; a.tags.warning += 'В названии пишите только имя, тип укажите в теге <i>official_short_type='+re[1]+'</i><br>'; }
+				if (a.tags.official_short_type)
+				{ color = 'orange'; a.tags.warning += 'Необходимо убрать тег <i>official_short_type</i><br>'; }
 				else
-				if (a.tags.name.indexOf('"') != -1 ||
-				    a.tags.name.indexOf('«') != -1) { color = 'yellow'; a.tags.warning +=
-						'В названии не должно быть кавычек, если это СТ/СНТ/ДНП, используйте тег <i>official_short_type=*</i><br>'; }
+				if (0
+					|| a.tags.name.indexOf('«им') != -1
+					|| a.tags.name.indexOf('«№') != -1) { color = 'red'; a.tags.warning +=
+						'Избыточные кавычки<br>'; }
+				else
+				if ((0
+					|| a.tags.name.indexOf('СН') != -1
+					|| a.tags.name.indexOf('СТ')  != -1
+					|| a.tags.name.indexOf('с/т') != -1
+					)
+					&& a.tags.name.indexOf('«') == -1
+					&& a.tags.name.indexOf('№') == -1
+					&& a.tags.name.indexOf('имени') == -1
+					) { color = 'red'; a.tags.warning +=
+						'Напишите название СНТ в кавычках «»<br>'; }
+				else
+				if (a.tags.name.indexOf('"') != -1 && a.tags.name.indexOf('«') == -1) { color = 'red'; a.tags.warning +=
+						'Возьмите название в кавычки ёлочки «»<br>'; }
+				else
+				if (a.tags.name.indexOf('«') != -1 && a.tags.name.indexOf('»') == -1) { color = 'red'; a.tags.warning +=
+						'Нет закрывающей кавычки<br>'; }
+				else
+				if (a.tags.name.indexOf('«') == -1 && a.tags.name.indexOf('»') != -1) { color = 'red'; a.tags.warning +=
+						'Нет открывающей кавычки<br>'; }
+				else
+				if (a.tags.name.indexOf('им.') != -1) { color = 'red'; a.tags.warning +=
+						'Вместо "им." напишите "имени"<br>'; }
 
 				if (!lines[a.id])
 				lines[a.id] = L.geoJSON(a.geoJSON, {color: color})
