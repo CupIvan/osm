@@ -156,13 +156,12 @@ search: function(filter, handler){
 					data[i].center[0] /= x.length
 					data[i].center[1] /= x.length
 				}
+
 				data[i].geo = _coords(data[i].nodes)
+				data[i].nodes = x
 
 				if (a.type == 'way')
-				{
-					data[i].nodes = x
 					data[i].geoJSON.push(data[i].geo)
-				}
 			}
 			if (a.type == 'node')
 				data[i].center = [a.lat, a.lon]
