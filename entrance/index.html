@@ -46,7 +46,7 @@ function getBuildingColor(a)
 	if (!a.tags['building:levels'])  c = color.warn;
 	if (!a.tags['addr:housenumber']) c = color.error;
 	if ( a.tags['addr:city'] != 'Зеленоград')
-	if (!a.tags['addr:street'])      c = color.error;
+	if (!a.tags['addr:street'] && !a.tags['addr:place']) c = color.error;
 	if (!a.entrances.length)         c = color.error;
 	if (a.tags['building:part'])     c = color.gray;
 	return c
@@ -203,8 +203,9 @@ function make_popup(a)
 
 	if (!a || !a.tags) return
 
-	if (a.tags['building'] == 'apartments') st += '<b>Многоэтажный жилой дом</b><br>'
-	if (a.tags['building:part'] == 'apartments') st += '<b>Многоэтажный жилой дом (часть здания)</b><br>'
+	if (a.tags['building']      == 'apartments') st += '<b>Многоквартирный жилой дом</b><br>'
+	if (a.tags['building:part'] == 'apartments') st += '<b>Многоквартирный жилой дом (часть здания)</b><br>'
+	if (a.tags['building']      == 'dormitory')  st += '<b>Общежитие</b><br>'
 
 	if (!a.tags['building:levels'])
 		st += 'Укажите кол-во этажей <b>building:levels</b><br>'
@@ -217,7 +218,10 @@ function make_popup(a)
 	if ( a.tags['addr:city'] != 'Зеленоград') // у Зеленограда нумерация без улицы
 	if (!a.tags['building:part']) // улица пишется на основном контуре
 	if (!a.tags['addr:street'])
-		st += 'Укажите улицу <b>addr:street</b><br>'
+	{
+		if (!a.tags['addr:place'])
+			st += 'Укажите улицу <b>addr:street</b><br>'
+	}
 	else
 		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
 
@@ -228,7 +232,7 @@ function make_popup(a)
 		st += 'Номер дома: <i>'+a.tags['addr:housenumber']+'</i><br>'
 
 	if (!a.entrances.length)
-		st += 'В жилом доме не найдено ни одного подъезда!<br>'
+		st += 'В здании не найдено ни одного подъезда!<br>'
 	else
 	{
 		st += '<u>Подъездов '+a.entrances.length+':</u><br>'
@@ -248,10 +252,10 @@ function draw_entrance()
 {
 	if (map.getZoom() >= 16)
 	{
-		var ck = 0
+		var ck = 0, ck_max = 0
 		var _ = function(data){
 			if (!data.length) return $('info', 'Нет данных')
-			$('info', 'Данные загружены '+(ck/2*100)+'%')
+			$('info', 'Данные загружены '+Math.round(ck/3*100)+'%')
 
 			var i, a, node
 			for (a=data[i=0]; i<data.length; a=data[++i])
@@ -278,6 +282,9 @@ function draw_entrance()
 			}
 		}
 		osm.search({'building': 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
+			ck++; _(data)
+		})
+		osm.search({'building': 'dormitory', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
 			ck++; _(data)
 		})
 		osm.search({'building:part': 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
