@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Школы на карте OSM</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+
+	<style>
+		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<div id="map"></div>
+
+<script>
+var lines = {}, circles = {}
+var map = map.init()
+
+/** содержимое popup на здании */
+function make_popup(a, marker)
+{
+	var x, st = ''
+
+	if (a.tags[x='name'])
+		st += '<b>'+a.tags[x]+'</b><br>'
+
+	if (a.tags[x='ref'])
+		st += 'Номер: <i>'+a.tags[x]+'</i><br>'
+
+	if (a.tags[x='operator'])
+		st += 'Организация: <i>'+a.tags[x]+'</i><br>'
+
+	if (a.tags[x='fee'] == 'yes')
+		st += 'Платное образование<br>'
+
+	if (a.tags[x='isced:level'])
+	{
+		//        0             1                       2                    3                       4      5         6
+		var _ = ['дошкольное', 'начальное (4 класса)', 'общее (9 классов)', 'среднее (11 классов)', 'ПТУ', 'высшее', 'послевузовое']
+		st += 'Уровень образования: '+(_[a.tags[x]]||'?')+'<br>'
+	} else
+		st += '<span style="color: red">Проставьте уровень образования <i>'+x+'</i></span><br>'
+
+	if (a.tags[x='contact:website'])
+		st += 'Сайт: <a href="'+a.tags[x]+'" target="_blank">'+a.tags[x]+'</a><br>'
+
+	if (a.tags[x='addr:street'])
+	{
+		st += 'Адрес: <i>'+a.tags[x]
+		if (a.tags[x='addr:housenumber']) st += ', '+a.tags[x]+''
+		st += '</i><br>'
+	}
+
+	var re, params = null
+	re = /Школа №(\d+)/.exec(a.tags.name)
+	if (re)
+	{
+		params = {
+			'ref': re[1],
+			'isced:level': 3,
+			onedit: function(){ marker.setRadius(3) },
+		}
+	}
+
+	st += osm.editLinks(a, params)
+
+	return st;
+}
+
+/** основная функция для загрузки и отрисовки геометрии */
+function draw()
+{
+	var color
+
+	if (map.getZoom() >= 12)
+	{
+		osm.search({'amenity': 'school', bounds: map.getBounds().toBBoxString().split(','), node:true, way: true, relation: true}, function(data){
+			if (!data.length) return $('info', 'Нет данных')
+			$('info', 'Данные загружены')
+			var i, a
+			for (a=data[i=0]; i<data.length; a=data[++i])
+			{
+				color = 'blue'
+				if (!a.tags.name) color = 'red'
+				if (!a.tags['isced:level']) color = 'yellow'
+
+				if (color == 'blue')
+				{
+					if (a.tags['isced:level'] == 1) color = 'lightblue'
+					if (a.tags.name.indexOf('имназия') != -1 || a.tags.name.indexOf('ицей') != -1) color = 'darkblue'
+				}
+
+				if (!lines[a.id])
+				lines[a.id] = L.geoJSON(a.geoJSON, {color: color})
+					.bindPopup('', { data: a })
+				if (!circles[a.id])
+				circles[a.id] = L.circleMarker(a.center, {radius: 10, color: color})
+					.bindPopup('', { data: a })
+				if (map.getZoom() > 14)
+				{
+					lines[a.id].addTo(map)
+					circles[a.id].remove()
+				} else
+				{
+					lines[a.id].remove()
+					circles[a.id].addTo(map)
+				}
+			}
+		})
+
+		msg = 'Загрузка...'
+	} else
+		msg = 'Для отображения данных необходимо увеличить масштаб карты.<br>'
+			+' <a href="https://forum.openstreetmap.org/viewtopic.php?pid=635464">Отзывы</a> и'
+			+' <a href="https://wiki.openstreetmap.org/wiki/RU:Tag:amenity%3Dschool">Справка по разметке</a>';
+
+	$('info', msg)
+}
+
+map.on('moveend', draw)
+draw()
+
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
