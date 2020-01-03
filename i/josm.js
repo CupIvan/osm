@@ -1,3 +1,4 @@
+// https://josm.openstreetmap.de/wiki/Help/RemoteControlCommands
 var josm = {
 	version: false, // версия JOSM
 	running: false, // запущен ли редактор
@@ -25,7 +26,6 @@ var josm = {
 		if (!type) type = osm.getType(a.id)
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id
 	},
-	// https://josm.openstreetmap.de/wiki/Help/RemoteControlCommands
 	/** ссылка на изменение параметров */
 	link_edit: function(a, params)
 	{
@@ -35,6 +35,10 @@ var josm = {
 		for (i in params) tags += (tags?'%7C':'')+i+'='+encodeURIComponent(params[i])
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id+'&addtags='+tags
 	},
+	link_zoom: function(a, delta=0.00001)
+	{
+		return 'http://127.0.0.1:8111/load_and_zoom?left='+(a.lon-delta)+'&right='+(a.lon+delta)+'&top='+(a.lat+delta)+'&bottom='+(a.lat-delta)
+	}
 }
 
 /** проверка запущен JOSM или нет */

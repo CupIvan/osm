@@ -30,6 +30,7 @@
 
 <script>
 var map = map.init({lat: 53.814, lon: 55.679, z: 5, update_hash: false})
+var g_points = []
 
 function str_replace(x, from, to)
 {
@@ -70,12 +71,55 @@ function make_popup(data)
 	}
 	if (data.hqs)
 	{
+		let _h = (x) => {
+			const a={'пн':'Mo','вт':'Tu','ср':'We','чт':'Th','пт':'Fr','сб':'Sa','вс':'Su'}
+			for (let day in a) x = x.replace(new RegExp(day, 'i'), a[day])
+			x = x.replace('открыт ', '')
+			x = x.replace(': ', ' ')
+			x = x.replace(/–/g, '-')
+			x = x.replace(/с /g, '')
+			x = x.replace(/ до /g, '-')
+			x = x.replace(/,/g, ';')
+			return x
+		}
 		a = data
 		st += '<h2>'+a.city+'</h2>'
-		st += 'Адрес: '+data.hqs[0].address
+		st += '<br>Адрес: '+data.hqs[0].address
+		st += '<br>Телефон: '+data.hqs[0].phone.replace(/[^+0-9]/g, '')
+		st += '<br>email: '+data.hqs[0].email
+		st += '<br>Часы работы: '+_h(data.hqs[0].hours)
 		st += '<br>'+data.hqs[0].person
-		st += '<br><br><a href="https://shtab.navalny.com'+data.hqs[0].page+'">официальная страница</a>'
+		data.website = 'https://shtab.navalny.com'+data.hqs[0].page
+		st += '<br><br><a href="'+data.website+'">официальная страница</a>'
 		st += '<br><hr><small>Данные с сайта <a href="https://shtab.navalny.com" target="_blank">shtab.navalny.com</a>'
+
+		// ищем точку OSM для привязки
+		if (josm.running)
+		{
+			var i, a
+			var near = function(a, b) { var dlat=dlon=0.001, _=function(x){return x>0?x:-x};
+				if (_(a.lat-b.lat) < dlat && _(a.lon-b.lon) < dlon) return true; return false }
+			var d, di, dmin = -1
+			for (i=0; i<g_points.length;i++)
+			{
+				d = map.distance(g_points[i], data)
+				if (d > 10000) continue // ищем точку на расстоянии не более 5км
+				if (dmin < 0 || d < dmin) { dmin = d; di = i }
+			}
+			if (dmin != -1)
+			{
+				var tags = {
+					'opening_hours': _h(data.hqs[0].hours),
+					'contact:phone': data.hqs[0].phone.replace(/[^+0-9]/g, ''),
+					'contact:website': data.website,
+				}
+				if (re = data.hqs[0].address.match(/(\d) эт/)) tags['level'] = re[1]
+				st += '<br>   <a href="'+josm.link_edit(g_points[di], tags)+'" target="josm">Копировать в JOSM</a>'
+				st += '   |   <a href="'+josm.link_zoom(data)+'" target="josm">Открыть в JOSM</a>'
+				L.polyline([data, g_points[di]], {color: 'red'}).addTo(map);
+				if (dmin > 20) map.setZoomAround(data, 16) // зумим, если дальше 20 метров
+			}
+		}
 	}
 	return st;
 }
@@ -94,7 +138,9 @@ function init()
 	ajax('map.php', function(a){
 		var i, j
 		var add_point = function(a){
-			L.circleMarker([a.coords[1], a.coords[0]], {radius: a.opened?10:5, color: "#55F"}).addTo(map).bindPopup(0, { data: a })
+			a.lat = a.coords[1]
+			a.lon = a.coords[0]
+			L.circleMarker(a, {radius: a.opened?10:5, color: "#55F"}).addTo(map).bindPopup(0, { data: a })
 			stat.n++
 		}
 		for (i in a)
@@ -104,6 +150,7 @@ function init()
 	})
 	osm.search({'name': 'Штаб Алексея Навального', 'node': true}, function(data){
 		if (!data.length) return $('info', 'Нет данных')
+		g_points = data
 		$('info', 'Данные загружены')
 		var i
 		for (i=0; i<data.length; i++)
