@@ -180,6 +180,7 @@ search: function(filter, handler){
 link: function(id, type)
 {
 	if (!type) type = josm.getType(id)
+	if (!type) return ''
 	return 'http://www.openstreetmap.org/browse/'+type+'/'+id
 },
 /** тип объекта */
@@ -201,7 +202,9 @@ editLinks: function(a, params)
 {
 	var st = ''
 	st +='<hr><small>'
-	st += '<a target="_blank" href="'+osm.link(a.id, a.type)+'">Открыть в OSM</a>'
+	let link = osm.link(a.id, a.type)
+	if (!link) return ''
+	st += '<a target="_blank" href="'+link+'">Открыть в OSM</a>'
 	if (josm.running)
 	{
 		st += '   <a target="josm" href="'+josm.link(a)+'">Загрузить в JOSM</a>'
