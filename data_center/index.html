@@ -29,12 +29,24 @@
 
 <script>
 var lines = {}, circles = {}
-osm.search_region = 1
+osm.search_region = 5
 var map = map.init()
 
 /** хостинг */
 var hosting = {
-	'IXcellerate': { website: 'http://ihc.ru', name: 'Интернет Хостинг Центр' },
+	'IXcellerate': [{ website: 'http://ihc.ru', name: 'Интернет Хостинг Центр' }],
+	'webdc': [
+		{website: 'http://www.ruweb.net',      name: 'ЗАО "РУВЕБ"'},
+		{website: 'https://www.ispserver.com', name: 'ISPserver'},
+		{website: 'https://www.e-planet.ru',   name: 'E-planet'},
+		{website: 'https://www.firstvds.ru',   name: 'FirstVDS'},
+		{website: 'https://www.firstdedic.ru', name: 'FirstDedic'},
+		{website: 'http://www.mybb.ru',        name: 'MyBB'},
+	],
+	'МАРОСНЕТ': [
+		{website: 'https://www.ihor.ru',       name: 'Айхор Хостинг'},
+		{website: 'https://time-host.net',     name: 'Time-Host'},
+	],
 }
 
 /** содержимое popup на здании */
@@ -78,9 +90,9 @@ function make_popup(a)
 /** основная функция для загрузки и отрисовки геометрии */
 function draw()
 {
-	if (map.getZoom() >= 7)
+	if (map.getZoom() >= 3)
 	{
-		osm.search({'telecom': 'data_center', bounds: map.getBounds().toBBoxString().split(','), node:true, way: true, relation: true}, function(data){
+		osm.search({'place': 'state', bounds: map.getBounds().toBBoxString().split(','), node:true, way: true, relation: true}, function(data){
 			if (!data.length) return $('info', 'Нет данных')
 			$('info', 'Данные загружены')
 			var i, a

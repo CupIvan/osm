@@ -20,10 +20,11 @@ var josm = {
 			'</a>'
 	},
 	/** ссылка на объект */
-	link: function(a)
+	link: function(a = {})
 	{
 		var type = a.type
 		if (!type) type = osm.getType(a.id)
+		if (!type) return null
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id
 	},
 	/** ссылка на изменение параметров */
@@ -37,14 +38,9 @@ var josm = {
 	},
 	link_zoom: function(a, delta=0.00001)
 	{
-		return 'http://127.0.0.1:8111/load_and_zoom?left='+(a.lon-delta)+'&right='+(a.lon+delta)+'&top='+(a.lat+delta)+'&bottom='+(a.lat-delta)
-	},
-	getType: function(id) {
-		if (!id) return null
-		if (id.indexOf('n') === 0) return 'node'
-		if (id.indexOf('w') === 0) return 'way'
-		if (id.indexOf('r') === 0) return 'relation'
-		return null
+		if (!a.lat && a.center)
+			[a.lat, a.lon] = a.center
+		return 'http://127.0.0.1:8111/load_and_zoom?left='+(a.lon-delta)+'&right='+(a.lon-0+delta)+'&top='+(a.lat-0+delta)+'&bottom='+(a.lat-delta)
 	},
 }
 

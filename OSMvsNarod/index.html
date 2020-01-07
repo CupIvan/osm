@@ -166,7 +166,7 @@ function search(x, noZoom)
 			if (noZoom) return;
 			f = 1; map2.setBounds(map2col.getBounds()); f = 0;
 		}
-		ajax.loadJS('http://openstreetmap.ru/api/search?callback='+t+
+		ajax.loadJS('//openstreetmap.ru/api/search?callback='+t+
 			'&q='+encodeURIComponent(x)+'&email=cupivan@narod.ru&from=OSMvsNarod');
 
 		// поиск по Я.Карте
@@ -189,17 +189,17 @@ function mapTo(x)
 	switch (map)
 	{
 		case 'osm':
-			x.href = 'http://osm.org.ru?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
+			x.href = '//openstreetmap.ru?#map='+map1.getZoom()+'/'+map1.getCenter().join('/');
 			break;
 		case 'ymap':
-			x.href = 'http://maps.yandex.ru/?ll='+(''+map1.getCenter()).replace(/(.+),(.+)/, '$2%2C$1')+'&z='+map1.getZoom();
+			x.href = '//maps.yandex.ru/?ll='+(''+map1.getCenter()).replace(/(.+),(.+)/, '$2%2C$1')+'&z='+map1.getZoom();
 			break;
 		case 'josm':
 			var bbox = (''+map1.getBounds()).replace(/(.+),(.+),(.+),(.+)/, 'left=$2&bottom=$1&right=$4&top=$3');
 			frame.location = 'http://localhost:8111/load_and_zoom?'+bbox;
 			return false;
 		case 'geocoder':
-			x.href = '/latlon.html#?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
+			x.href = '/latlon/#?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
 			break;
 	}
 }
@@ -212,14 +212,14 @@ function mapTo(x)
 	<tr><td id="header" colspan="2">
 		<input id="search" placeholder="Поиск..." onkeyup="search(this.value)">
 		<span id="maps_links">
-			<a href="#osm"  title="Открыть карту на OpenStreetMap" target="_blank" onclick="return mapTo(this)"><img src="http://osm.org.ru/favicon.png"></a>
-			<a href="#ymap" title="Открыть карту в Яндекс.Картах"  target="_blank" onclick="return mapTo(this)"><img src="http://maps.yandex.ru/favicon.ico"></a>
+			<a href="#osm"  title="Открыть карту на OpenStreetMap" target="_blank" onclick="return mapTo(this)"><img src="//openstreetmap.ru/favicon.png"></a>
+			<a href="#ymap" title="Открыть карту в Яндекс.Картах"  target="_blank" onclick="return mapTo(this)"><img src="//maps.yandex.ru/favicon.ico"></a>
 			 
-			<a href="#josm" title="Открыть карту в JOSM" onclick="return mapTo(this)"><img src="http://josm.openstreetmap.de/favicon.ico"></a>
-			<a href="#geocoder" title="Открыть место в геокодере" onclick="return mapTo(this)"><img src="http://josm.openstreetmap.de/favicon.ico"></a>
+			<a href="#josm" title="Открыть карту в JOSM" onclick="return mapTo(this)"><img src="//josm.openstreetmap.de/favicon.ico"></a>
+			<a href="#geocoder" title="Открыть место в геокодере" onclick="return mapTo(this)">GEO</a>
 		</span>
 			 
-		<span id="wiki_coords" onclick="this.innerHTML='lat'; this.style.cursor='auto'; $('marker_center').style.display='block'; saveCoords();">[ wiki-градус ]</span>
+		<span id="wiki_coords" onclick="this.innerHTML='lat'; this.style.cursor='auto'; $('marker_center').style.display='block'; saveCoords();" title="Координаты для вставки в Википедию">[ wiki-градус ]</span>
 	</td></tr>
 	<tr>
 		<td id="map2"><div id="marker_center"></div></td>
@@ -229,6 +229,9 @@ function mapTo(x)
 
 	<iframe id="frame" style="display: none"></iframe>
 
-	<!-- Yandex.Metrika counter --><script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+	<!-- Yandex.Metrika counter -->
+	<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+	<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+	<!-- /Yandex.Metrika counter -->
 </body>
 </html>

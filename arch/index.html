@@ -48,6 +48,8 @@ var architecure = {
 	'postconstructivism':      { color: '#707', title: 'постконструктивизм' },
 	'contemporary':            { color: '#770', title: 'архитектура 21 века' },
 	'eclectic':                { color: '#07F', title: 'эклектизм' },
+	'classicism':              { color: '#000', title: '' },
+	'oldrussian':              { color: '#000', title: '' },
 }
 function getBuildingColor(a)
 {
@@ -76,11 +78,8 @@ function make_popup(a)
 	if (a.tags['building:levels'])
 		st += 'Этажей: <i>'+a.tags['building:levels']+'</i><br>'
 
-	if (a.tags['addr:housenumber'])
-		st += 'Номер дома: <i>'+a.tags['addr:housenumber']+'</i><br>'
-
 	if (a.tags['addr:street'])
-		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
+		st += 'Адрес: <i>'+a.tags['addr:street']+', д. '+a.tags['addr:housenumber']+'</i><br>'
 
 	st += osm.editLinks(a)
 

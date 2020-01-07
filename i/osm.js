@@ -1,17 +1,18 @@
 var osm = {
 search_region: 60, // коэффициент округления координат (чем меньше - тем больший регион скачивается)
+debug: false,
 
 /** поиск объектов в OSM базе */
 search: function(filter, handler){
-	var bounds = ''
+	var bounds = '', _bounds = []
 	if (filter.bounds)
 	{
 		filter.bounds, k = osm.search_region
 		bounds = ''
-			+ '(' + Math.floor(filter.bounds[1]*k)/k
-			+ ',' + Math.floor(filter.bounds[0]*k)/k
-			+ ',' + Math.ceil( filter.bounds[3]*k)/k
-			+ ',' + Math.ceil( filter.bounds[2]*k)/k
+			+ '(' + (_bounds[0]=Math.floor(filter.bounds[1]*k)/k)
+			+ ',' + (_bounds[1]=Math.floor(filter.bounds[0]*k)/k)
+			+ ',' + (_bounds[2]=Math.ceil( filter.bounds[3]*k)/k)
+			+ ',' + (_bounds[3]=Math.ceil( filter.bounds[2]*k)/k)
 			+ ')';
 		delete filter.bounds
 	}
@@ -22,7 +23,7 @@ search: function(filter, handler){
 	if (filter[x='relation']) { type[x]=1; delete filter[x] }
 	if (!type.node && !type.way && !type.relation) type = {nwr:1}
 
-	var i, f=''
+	var i, j, f=''
 	for (i in filter)
 	{
 		if (i == 'id') { f = '(id:'+filter[i]+')'; break; }
@@ -40,10 +41,23 @@ search: function(filter, handler){
 			+(type.nwr     ?('nwr' +f+bounds+';'):'')
 		+');(._;>;);out body;';
 
+	var _bounds_coords = []
+	if (osm.debug)
+	{
+		console.log('BOUNDS: '+bounds)
+		_bounds_coords.push([_bounds[1], _bounds[0]])
+		_bounds_coords.push([_bounds[1], _bounds[2]])
+		_bounds_coords.push([_bounds[3], _bounds[2]])
+		_bounds_coords.push([_bounds[3], _bounds[0]])
+	}
+
 	ajax('/overpass/?data='+encodeURIComponent(query)
 		+'&domain='+encodeURIComponent(window.location.hostname), function(x){
 		var i, j, a, data = []
 		var nodes = {}, ways = {}
+
+		if (osm.debug)
+			data.push({type: 'bounds', id: JSON.stringify(_bounds_coords), coords: _bounds_coords})
 
 		if (!x.elements) return handler(data)
 
@@ -82,6 +96,12 @@ search: function(filter, handler){
 		var is_sibling = function(x, y)
 		{
 			if (x == y) return 0
+			if (!ways[x] || !ways[y])
+			{
+				var t = !ways[x] ? 'x='+x: 'y='+y
+				if (osm.debug) console.log('SIBLING ERROR: '+t)
+				return 0
+			}
 			if (ways[x].nodes[ways[x].nodes.length - 1] == ways[y].nodes[0]) return 1
 			if (ways[x].nodes[ways[x].nodes.length - 1] == ways[y].nodes[ways[y].nodes.length - 1]) return 2
 			return 0
@@ -99,6 +119,7 @@ search: function(filter, handler){
 				// сортировка веев и разворачивание для правильной геометрии
 				var _members = [], _last = null
 				for (j = 0; j < a.members.length; j++)
+				if (a.members[j].type == 'way')
 				if (0
 					|| !_last                           // первый вэй оставляем как есть
 					|| a.members[j].role != 'outer')    // и добавляем всё что не outer
@@ -166,6 +187,9 @@ search: function(filter, handler){
 			if (a.type == 'node')
 				data[i].center = [a.lat, a.lon]
 
+			if (a.type == 'bounds')
+				data[i].geoJSON = [a.coords]
+
 			if (a.type == 'node')
 				data[i].geoJSON = {type: 'Point', coordinates: [a.lon, a.lat]}
 			else
@@ -179,13 +203,14 @@ search: function(filter, handler){
 /** ссылка на объект */
 link: function(id, type)
 {
-	if (!type) type = josm.getType(id)
-	if (!type) return ''
-	return 'http://www.openstreetmap.org/browse/'+type+'/'+id
+	if (!type) type = osm.getType(id)
+	return type ? 'http://www.openstreetmap.org/browse/'+type+'/'+id : ''
 },
 /** тип объекта */
 getType: function(id)
 {
+	if (!id) return null
+
 	var type; id += ''
 
 	if (id.charAt(0) == 'n') type = 'node'
@@ -200,23 +225,27 @@ getType: function(id)
 /** ссылки на редактирование */
 editLinks: function(a, params)
 {
-	var st = ''
-	st +='<hr><small>'
-	let link = osm.link(a.id, a.type)
-	if (!link) return ''
-	st += '<a target="_blank" href="'+link+'">Открыть в OSM</a>'
+	const res = []
+	let url
+	if (url = osm.link(a.id, a.type))
+		res.push('<a target="_blank" href="'+url+'">OSM</a>')
 	if (josm.running)
 	{
-		st += '   <a target="josm" href="'+josm.link(a)+'">Загрузить в JOSM</a>'
+		res.push('<a href="'+josm.link_zoom(a)+'" target="josm">JOSM</a>')
+		if (url = josm.link(a))
+			res.push('<a target="josm" href="'+url+'">Загрузить в JOSM</a>')
 		if (params)
 		{
-			if (params.onedit) this.onedit = params.onedit
+			if (params.onedit)
+				this.onedit = params.onedit
 			delete params.onedit
-			st += ' (<a target="josm" href="'+josm.link_edit(a, params)+'" onclick="osm.onEdit()">Правка</a>)'
+			if (url = josm.link_edit(a, params))
+				res.push(' (<a target="josm" href="'+url+'" onclick="osm.onEdit()">Правка</a>)')
 		}
 	}
-	st += '   <a target="_blank" href="http://level0.osmz.ru/?url='+a.type+'/'+a.id+'">Открыть в level0</a>'
-	return st
+	if (a.type && a.id)
+		res.push('<a target="_blank" href="http://level0.osmz.ru/?url='+a.type+'/'+a.id+'">level0</a>')
+	return res.length ? '<hr><small>'+res.join('   |   ') : ''
 },
 onEdit: function()
 {

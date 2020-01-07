@@ -64,14 +64,6 @@ function make_popup(a, marker)
 	{
 		st += 'Другое название: <b>'+a.tags[x]+'</b><br>'
 	}
-	if (a.tags[x='old_name'])
-	{
-		st += 'Предыдущее название: <b>'+a.tags[x]+'</b><br>'
-	}
-	if (a.tags[x='alt_name'])
-	{
-		st += 'Другое название: <b>'+a.tags[x]+'</b><br>'
-	}
 
 	if (a.tags[x='error'])
 		st += '<b style="color: red">'+a.tags[x]+'</b><br>'
@@ -92,11 +84,11 @@ function make_popup(a, marker)
 		var ost = 'official_short_type'
 		if (a.tags[ost]) t = a.tags[ost]
 		var name = (''+a.tags.name).replace(t, '').replace(/^\s+|\s+$/g, '').replace(/^["«']|["»']$/g, '')
-		name = name.replace('им.', 'имени')
+		name = name.replace('им.', 'имени').replace(/№\s+(\d)/, '№\1')
 		if (name.indexOf('имени') != 0 && name.indexOf('№') != 0)
-		name = '«'+name+'»'
+		if (name) name = '«'+name+'»'
 		if (t) name = t+' '+name
-		params = {name: name}
+		if (name) params = {name: name}
 		if (a.tags[ost]) params[ost] = ''
 		params.onedit = function(){ marker.setRadius(3) }
 	}
@@ -121,7 +113,11 @@ function update_column()
 	if (g_data[i].tags.name)
 	{
 		t = ''; n = g_data[i].tags.name
-		if (re = /(.+) «(.+)»/.exec(n)) { t = re[1].replace(/ .+/, ''); n = re[2]; }
+		if (re = /(.+) «(.+)»/.exec(n))     { t = re[1].replace(/ .+/, ''); n = re[2]; }
+		else
+		if (re = /(.+) (имени .+)/.exec(n)) { t = re[1].replace(/ .+/, ''); n = re[2]; }
+		else
+		if (re = /(.+) (№.+)/.exec(n))      { t = re[1].replace(/ .+/, ''); n = re[2]; }
 		tmp.push({t:t, n:n, center: g_data[i].center})
 	}
 
