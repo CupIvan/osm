@@ -39,6 +39,8 @@ const brands = {
 	'Wildberries':  {color: '#481173'},
 	'Онлайн Трейд': {color: '#0067C1'},
 	'Ozon':         {color: '#005BFF'},
+	'My-shop':      {color: '#EFEFFF'},
+	'Ситилинк':     {color: '#F37F00'},
 }
 
 /** содержимое popup на здании */
@@ -98,11 +100,11 @@ function draw()
 map.on('moveend', draw)
 draw()
 
-function load(brand) {
+function load(brand, color) {
 	ajax('points.php?brand='+brand, function(a) {
 		var add_point = function(a) {
 			a.tags = { name: brand, opening_hours: a.h }
-			L.circleMarker(a, {radius: 3, color: brands[brand].color}).addTo(map).bindPopup(0, { data: a })
+			L.circleMarker(a, {radius: 3, color}).addTo(map).bindPopup(0, { data: a })
 		}
 		for (let i=0; i<a.length; i++)
 			add_point(a[i])
@@ -110,7 +112,8 @@ function load(brand) {
 }
 
 // подгрузка точек с сайтов интернет-магазинов
-load('Wildberries')
+load('Wildberries', brands['Wildberries'].color)
+load('Labirint',    brands['Лабиринт'].color)
 
 </script>
 
