@@ -101,6 +101,19 @@ function layerBing() {
 	);
 }
 
+function layerWikimapia() {
+	return new ymaps.Layer(
+		function(c,z){
+			return 'https://i'+(c[0]%4+(c[1]%4)*4)+
+			'.wikimapia.org/?lng=1&zoom='+z+'&x='+c[0]+'&y='+c[1]
+		},
+		{
+			projection: ymaps.projection.sphericalMercator,
+			tileTransparent: true
+		}
+	);
+}
+
 ymaps.ready(function () {
 	var c = getCoords(), t, oldLayer = 0;
 
@@ -109,6 +122,7 @@ ymaps.ready(function () {
 	layerSelector.addMapType(    new ymaps.MapType('Транспорт',     layer('tile2.opencyclemap.org/transport')));
 	layerSelector.addMapType(    new ymaps.MapType('Велокарта',     layer('tile.opencyclemap.org/cycle')));
 	layerSelector.addMapType(    new ymaps.MapType('Bing',          layerBing()));
+	layerSelector.addMapType(    new ymaps.MapType('Wikimapia',     layerWikimapia()));
 
 	map1 = new ymaps.Map("map1", {center: [c.lat, c.lon], zoom: c.zoom, type: "yandex#publicMap", behaviors: ['default', 'scrollZoom']});
 	map2 = new ymaps.Map("map2", {center: [c.lat, c.lon], zoom: c.zoom, type: null, behaviors: ['default', 'scrollZoom']}, {maxZoom: 18});
@@ -189,7 +203,7 @@ function mapTo(x)
 	switch (map)
 	{
 		case 'osm':
-			x.href = 'http://osm.org.ru?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
+			x.href = 'https://openstreetmap.ru?'+(''+map1.getCenter()).replace(/(.+),(.+)/, 'lat=$1&lon=$2')+'&zoom='+map1.getZoom();
 			break;
 		case 'ymap':
 			x.href = 'http://maps.yandex.ru/?ll='+(''+map1.getCenter()).replace(/(.+),(.+)/, '$2%2C$1')+'&z='+map1.getZoom();
@@ -212,8 +226,8 @@ function mapTo(x)
 	<tr><td id="header" colspan="2">
 		<input id="search" placeholder="Поиск..." onkeyup="search(this.value)">
 		<span id="maps_links">
-			<a href="#osm"  title="Открыть карту на OpenStreetMap" target="_blank" onclick="return mapTo(this)"><img src="http://osm.org.ru/favicon.png"></a>
-			<a href="#ymap" title="Открыть карту в Яндекс.Картах"  target="_blank" onclick="return mapTo(this)"><img src="http://maps.yandex.ru/favicon.ico"></a>
+			<a href="#osm"  title="Открыть карту на OpenStreetMap" target="_blank" onclick="return mapTo(this)"><img src="https://openstreetmap.ru/img/osm-ru.png"></a>
+			<a href="#ymap" title="Открыть карту в Яндекс.Картах"  target="_blank" onclick="return mapTo(this)"><img src="https://yastatic.net/s3/front-maps-static/front-maps//static/v5/icons/favicon/favicon.png"></a>
 			 
 			<a href="#josm" title="Открыть карту в JOSM" onclick="return mapTo(this)"><img src="http://josm.openstreetmap.de/favicon.ico"></a>
 			<a href="#geocoder" title="Открыть место в геокодере" onclick="return mapTo(this)"><img src="http://josm.openstreetmap.de/favicon.ico"></a>
