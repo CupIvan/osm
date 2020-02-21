@@ -101,6 +101,19 @@ function layerBing() {
 	);
 }
 
+function layerWikimapia() {
+	return new ymaps.Layer(
+		function(c,z){
+			return 'https://i'+(c[0]%4+(c[1]%4)*4)+
+			'.wikimapia.org/?lng=1&zoom='+z+'&x='+c[0]+'&y='+c[1]
+		},
+		{
+			projection: ymaps.projection.sphericalMercator,
+			tileTransparent: true
+		}
+	);
+}
+
 ymaps.ready(function () {
 	var c = getCoords(), t, oldLayer = 0;
 
@@ -109,6 +122,7 @@ ymaps.ready(function () {
 	layerSelector.addMapType(    new ymaps.MapType('Транспорт',     layer('tile2.opencyclemap.org/transport')));
 	layerSelector.addMapType(    new ymaps.MapType('Велокарта',     layer('tile.opencyclemap.org/cycle')));
 	layerSelector.addMapType(    new ymaps.MapType('Bing',          layerBing()));
+	layerSelector.addMapType(    new ymaps.MapType('Wikimapia',     layerWikimapia()));
 
 	map1 = new ymaps.Map("map1", {center: [c.lat, c.lon], zoom: c.zoom, type: "yandex#publicMap", behaviors: ['default', 'scrollZoom']});
 	map2 = new ymaps.Map("map2", {center: [c.lat, c.lon], zoom: c.zoom, type: null, behaviors: ['default', 'scrollZoom']}, {maxZoom: 18});
@@ -214,7 +228,6 @@ function mapTo(x)
 		<span id="maps_links">
 			<a href="#osm"  title="Открыть карту на OpenStreetMap" target="_blank" onclick="return mapTo(this)"><img src="//openstreetmap.ru/favicon.png"></a>
 			<a href="#ymap" title="Открыть карту в Яндекс.Картах"  target="_blank" onclick="return mapTo(this)"><img src="//maps.yandex.ru/favicon.ico"></a>
-			 
 			<a href="#josm" title="Открыть карту в JOSM" onclick="return mapTo(this)"><img src="//josm.openstreetmap.de/favicon.ico"></a>
 			<a href="#geocoder" title="Открыть место в геокодере" onclick="return mapTo(this)">GEO</a>
 		</span>
