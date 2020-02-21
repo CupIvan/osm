@@ -10,4 +10,5 @@ $(function(){
 		.github-fork-ribbon:before       { background: #333 }
 		.github-fork-ribbon:hover:before { background: #933; transition: background-color 200ms linear; }
 	</style>`
+	document.body.appendChild(div)
 })
