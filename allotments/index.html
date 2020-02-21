@@ -16,20 +16,36 @@
 	<script src="/i/common.js"></script>
 
 	<style>
-		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#outer { width: 100%; height: 100%; left: 0; top: 0; position: absolute; }
+		#column { width: 300px; }
 		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
 			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
 		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+
+		table.t { border: 2px solid #777; border-collapse: collapse; }
+		table.t td,
+		table.t th { padding: 0px 5px; }
+		table.t th { background: #EEE; }
+		table.t tr:nth-child(odd) td { background: #FAFAFA; }
+		table.t tr:hover td          { background: #F0F0F0; }
+		table.t .active              { outline: 2px solid #777; }
+		table.t td                   { cursor: pointer; }
 	</style>
 </head>
 
 <body>
 
 <div id="info"></div>
-<div id="map"></div>
+
+<table id="outer">
+<tr>
+<td id="column">
+<td id="map">
+</tr>
+</table>
 
 <script>
-var lines = {}, circles = {}
+var lines = {}, circles = {}, g_data = {}
 osm.search_region = 100
 var map = map.init()
 
@@ -39,10 +55,7 @@ function make_popup(a, marker)
 	var x, st = ''
 
 	if (a.tags['name'])
-	{
-		if (a.tags[x='official_short_type']) st += '<b>'+a.tags[x]+'</b> '
-		st += '<b>'+(st?'«':'')+a.tags['name']+(st?'»':'')+'</b><br>'
-	}
+		st += '<b>'+a.tags['name']+'</b><br>'
 	if (a.tags[x='old_name'])
 	{
 		st += 'Предыдущее название: <b>'+a.tags[x]+'</b><br>'
@@ -65,17 +78,71 @@ function make_popup(a, marker)
 		st += 'Сайт: <a href="'+a.tags[x]+'" target="_blank">'+a.tags[x]+'</a><br>'
 
 	var re, params = null
-	if (re = /^([А-Я]+|с\/т) /.exec(a.tags.name))
+	re = /^([А-Я]+|с\/т|с\/о) /.exec(a.tags.name)
 	{
-		var t = re[1]; if (t == 'с/т') t = 'СТ'
-		var name = a.tags.name.replace(t, '').replace(/^\s+|\s+$/g, '').replace(/^["«']|["»']$/g, '')
-		params = {official_short_type: t, name: name}
+		var t = re?re[1]:''; if (t == 'с/т') t = 'СТ'; if (t == 'с/о') t = 'СО'
+		var ost = 'official_short_type'
+		if (a.tags[ost]) t = a.tags[ost]
+		var name = (''+a.tags.name).replace(t, '').replace(/^\s+|\s+$/g, '').replace(/^["«']|["»']$/g, '')
+		name = name.replace('им.', 'имени').replace(/№\s+(\d)/, '№\1')
+		if (name.indexOf('имени') != 0 && name.indexOf('№') != 0)
+		if (name) name = '«'+name+'»'
+		if (t) name = t+' '+name
+		if (name) params = {name: name}
+		if (a.tags[ost]) params[ost] = ''
 		params.onedit = function(){ marker.setRadius(3) }
 	}
 
 	st += osm.editLinks(a, params)
 
 	return st;
+}
+
+/** обновление колонки */
+function update_column()
+{
+	var st = '', i
+	st += '<div style="overflow-y: scroll; height: 100%;">'
+
+	st += '<table class="t"><tr><th>Тип</th><th>Название</th></tr>'
+
+	var tmp = []
+
+	var t, n, re
+	for (i in g_data)
+	if (g_data[i].tags.name)
+	{
+		t = ''; n = g_data[i].tags.name
+		if (re = /(.+) «(.+)»/.exec(n))     { t = re[1].replace(/ .+/, ''); n = re[2]; }
+		else
+		if (re = /(.+) (имени .+)/.exec(n)) { t = re[1].replace(/ .+/, ''); n = re[2]; }
+		else
+		if (re = /(.+) (№.+)/.exec(n))      { t = re[1].replace(/ .+/, ''); n = re[2]; }
+		tmp.push({t:t, n:n, center: g_data[i].center})
+	}
+
+	tmp.sort(function(x, y){ return x.n.localeCompare(y.n) })
+
+	var prev_name = ''
+	for (i=0; i<tmp.length; i++)
+	{
+		st += '<tr onclick="map.panTo(['+tmp[i].center+'])" onmouseover="highlight(['+tmp[i].center+'])">'
+			+'<td>'+tmp[i].t+'</td><td style="'+(prev_name==tmp[i].n?'background: orange':'')+'">'+tmp[i].n+'</td></tr>'
+		prev_name = tmp[i].n
+	}
+
+	st += '</table>'
+
+	var el = document.querySelector('#column')
+	if (st != el.innerHTML) el.innerHTML = st
+}
+
+var hiCirle = null
+/** подсветка текущего объекта */
+function highlight(coords)
+{
+	if (!hiCirle) hiCirle = L.circleMarker(coords, {radius: 30, color: 'red'}).addTo(map)
+	hiCirle.setLatLng(coords).bringToBack()
 }
 
 /** основная функция для загрузки и отрисовки геометрии */
@@ -91,16 +158,41 @@ function draw()
 			var i, a, re
 			for (a=data[i=0]; i<data.length; a=data[++i])
 			{
-				color = 'blue'; a.tags.error = ''; a.tags.warning = ''
+				color = 'blue'; a.tags.error = ''; a.tags.warning = ''; g_data[a.type+a.id] = a
+				if (a.tags.name && a.tags.name.indexOf('№') != -1) color = '#77F'
 				if (!a.tags.name)
 				{ color = 'yellow'; a.tags.warning += 'Садовое товарищество без названия<br>'; }
 				else
-				if (!a.tags['official_short_type'] && (re = /^([А-Я]+|с\/т) /.exec(a.tags.name)))
-				{ color = 'red'; a.tags.warning += 'В названии пишите только имя, тип укажите в теге <i>official_short_type='+re[1]+'</i><br>'; }
+				if (a.tags.official_short_type)
+				{ color = 'orange'; a.tags.warning += 'Необходимо убрать тег <i>official_short_type</i><br>'; }
 				else
-				if (a.tags.name.indexOf('"') != -1 ||
-				    a.tags.name.indexOf('«') != -1) { color = 'yellow'; a.tags.warning +=
-						'В названии не должно быть кавычек, если это СТ/СНТ/ДНП, используйте тег <i>official_short_type=*</i><br>'; }
+				if (0
+					|| a.tags.name.indexOf('«им') != -1
+					|| a.tags.name.indexOf('«№') != -1) { color = 'red'; a.tags.warning +=
+						'Избыточные кавычки<br>'; }
+				else
+				if ((0
+					|| a.tags.name.indexOf('СН') != -1
+					|| a.tags.name.indexOf('СТ')  != -1
+					|| a.tags.name.indexOf('с/т') != -1
+					)
+					&& a.tags.name.indexOf('«') == -1
+					&& a.tags.name.indexOf('№') == -1
+					&& a.tags.name.indexOf('имени') == -1
+					) { color = 'red'; a.tags.warning +=
+						'Напишите название СНТ в кавычках «»<br>'; }
+				else
+				if (a.tags.name.indexOf('"') != -1 && a.tags.name.indexOf('«') == -1) { color = 'red'; a.tags.warning +=
+						'Возьмите название в кавычки ёлочки «»<br>'; }
+				else
+				if (a.tags.name.indexOf('«') != -1 && a.tags.name.indexOf('»') == -1) { color = 'red'; a.tags.warning +=
+						'Нет закрывающей кавычки<br>'; }
+				else
+				if (a.tags.name.indexOf('«') == -1 && a.tags.name.indexOf('»') != -1) { color = 'red'; a.tags.warning +=
+						'Нет открывающей кавычки<br>'; }
+				else
+				if (a.tags.name.indexOf('им.') != -1) { color = 'red'; a.tags.warning +=
+						'Вместо "им." напишите "имени"<br>'; }
 
 				if (!lines[a.id])
 				lines[a.id] = L.geoJSON(a.geoJSON, {color: color})
@@ -118,6 +210,7 @@ function draw()
 					circles[a.id].addTo(map)
 				}
 			}
+			update_column()
 		})
 
 		msg = 'Загрузка...'

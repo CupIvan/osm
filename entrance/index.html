@@ -39,15 +39,16 @@ map.createPane('circlePane').style.zIndex = 410
 map.on('popupopen', function(e){ if (e.popup.options.osm_id) e.popup.setContent(make_popup(g_osm_objects[e.popup.options.osm_id])); });
 
 /** цвет здания в зависимости от OSM ошибок */
-var color = { ok: '#0F0', warn: '#FF0', error: '#F00', noactive: '#000', blue: '#00F' };
+var color = { ok: '#0F0', warn: '#FF0', error: '#F00', noactive: '#000', blue: '#00F', gray: '#000' };
 function getBuildingColor(a)
 {
 	c = color.ok
 	if (!a.tags['building:levels'])  c = color.warn;
 	if (!a.tags['addr:housenumber']) c = color.error;
-	if (a.tags['addr:city'] != 'Зеленоград')
-	if (!a.tags['addr:street'])      c = color.error;
+	if ( a.tags['addr:city'] != 'Зеленоград')
+	if (!a.tags['addr:street'] && !a.tags['addr:place']) c = color.error;
 	if (!a.entrances.length)         c = color.error;
+	if (a.tags['building:part'])     c = color.gray;
 	return c
 }
 
@@ -189,7 +190,7 @@ function createEntranceMarker(a)
 	var marker = L.circle([a.lat, a.lon], radius, { color: c, weight: 2, fillColor: c, fillOpacity: 0.5, pane: 'circlePane' })
 		.addTo(map)
 		.bindPopup(comment);
-	if (a.tags.ref && stat.n_ref++ < 300)
+	if (a.tags.ref && stat.n_ref++ < 500)
 		marker.bindTooltip(a.tags.ref, {permanent: true, direction: 'center', className: 'ref'})
 
 	return marker
@@ -202,7 +203,9 @@ function make_popup(a)
 
 	if (!a || !a.tags) return
 
-	if (a.tags['building'] == 'apartments') st += '<b>Многоэтажный жилой дом</b><br>'
+	if (a.tags['building']      == 'apartments') st += '<b>Многоквартирный жилой дом</b><br>'
+	if (a.tags['building:part'] == 'apartments') st += '<b>Многоквартирный жилой дом (часть здания)</b><br>'
+	if (a.tags['building']      == 'dormitory')  st += '<b>Общежитие</b><br>'
 
 	if (!a.tags['building:levels'])
 		st += 'Укажите кол-во этажей <b>building:levels</b><br>'
@@ -212,25 +215,30 @@ function make_popup(a)
 	if (a.tags['addr:city'])
 		st += 'Город: <i>'+a.tags['addr:city']+'</i><br>'
 
-	if (a.tags['addr:city'] != 'Зеленоград') // у Зеленограда нумерация без улицы
+	if ( a.tags['addr:city'] != 'Зеленоград') // у Зеленограда нумерация без улицы
+	if (!a.tags['building:part']) // улица пишется на основном контуре
 	if (!a.tags['addr:street'])
-		st += 'Укажите улицу <b>addr:street</b><br>'
+	{
+		if (!a.tags['addr:place'])
+			st += 'Укажите улицу <b>addr:street</b><br>'
+	}
 	else
 		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
 
+	if (!a.tags['building:part']) // дом пишется на основном контуре
 	if (!a.tags['addr:housenumber'])
 		st += 'Укажите номер дома <b>addr:housenumber</b><br>'
 	else
 		st += 'Номер дома: <i>'+a.tags['addr:housenumber']+'</i><br>'
 
 	if (!a.entrances.length)
-		st += 'В жилом доме не найдено ни одного подъезда!<br>'
+		st += 'В здании не найдено ни одного подъезда!<br>'
 	else
 	{
-		st += 'Подъездов '+a.entrances.length+': '
+		st += '<u>Подъездов '+a.entrances.length+':</u><br>'
 		a.entrances.sort(function(x,y){ return x.ref - y.ref })
 		for (i=0; i<a.entrances.length; i++)
-			st += '<i title="Подъезд №'+a.entrances[i].ref+'">' + (a.entrances[i]['addr:flats'] || '?') + '</i> '
+			st += '<nobr style="margin-right: 5px;">№'+a.entrances[i].ref+':<i>' + (a.entrances[i]['addr:flats'] || '?') + '</i></nobr> '
 		st += '<br>'
 	}
 
@@ -244,9 +252,10 @@ function draw_entrance()
 {
 	if (map.getZoom() >= 16)
 	{
-		osm.search({building: 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
+		var ck = 0, ck_max = 0
+		var _ = function(data){
 			if (!data.length) return $('info', 'Нет данных')
-			$('info', 'Данные загружены')
+			$('info', 'Данные загружены '+Math.round(ck/3*100)+'%')
 
 			var i, a, node
 			for (a=data[i=0]; i<data.length; a=data[++i])
@@ -262,16 +271,24 @@ function draw_entrance()
 						markers[node.id] = createEntranceMarker(node)
 				}
 
-				if (a.tags['building:part'] && !a.entrances.length) continue
-
 				g_osm_objects[a.id] = a
 
 				c = getBuildingColor(a)
 				if (!lines[a.id] && c)
+				if (data[i].tags['type'] != 'building') // type == building пропускаем, т.к. будет builging:part
 				lines[a.id] = L.geoJSON(a.geoJSON, {style: {color: c, weight: 2, fillColor: c }})
 					.addTo(map)
 					.bindPopup('', { data: data[i] })
 			}
+		}
+		osm.search({'building': 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
+			ck++; _(data)
+		})
+		osm.search({'building': 'dormitory', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
+			ck++; _(data)
+		})
+		osm.search({'building:part': 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
+			ck++; _(data)
 		})
 		msg = 'Загрузка...';
 	} else

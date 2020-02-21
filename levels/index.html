@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 
-	<title>Архитектурные стили зданий на карте OSM</title>
+	<title>Этажность зданий на карте OSM</title>
 
 	<link rel="icon" href="./favicon.ico" type="image/x-icon">
 
@@ -33,33 +33,21 @@ var lines = {}
 osm.search_region = 200
 var map = map.init()
 
-/** типы зданий */
-var architecure = {
-	'stalinist neoclassicism': { color: '#0F0', title: 'сталинский ампир' },
-	'romanesque':              { color: '#00F', title: 'романская архитектура', },
-	'gothic':                  { color: '#0FF', title: 'готическая архитектура', },
-	'renaissance':             { color: '#F0F', title: 'архитектура возрождения', },
-	'neoclassicism':           { color: '#FF0', title: 'неоклассицизм', },
-	'art_nouveau':             { color: '#FFF', title: 'модерн' },
-	'modern':                  { color: '#070', title: 'модернизм', },
-	'modernism':               { color: '#F00', title: 'модерн (устаревший тег - нужно заменить на art_nouveau)' },
-	'new_objectivity':         { color: '#007', title: 'новая вещественность' },
-	'constructivism':          { color: '#077', title: 'конструктивизм' },
-	'postconstructivism':      { color: '#707', title: 'постконструктивизм' },
-	'contemporary':            { color: '#770', title: 'архитектура 21 века' },
-	'eclectic':                { color: '#07F', title: 'эклектизм' },
-	'classicism':              { color: '#000', title: '' },
-	'oldrussian':              { color: '#000', title: '' },
-}
 function getBuildingColor(a)
 {
 	var x
 	c = '#777'
 	if (a.tags)
-	if (x = a.tags['building:architecture'])
-	if (architecure[x])
-		c = architecure[x].color
-	else c = '#000'
+	{
+		if (a.tags['building'] == 'apartments') c = 'yellow'
+		var n = parseInt(a.tags['building:levels'])
+		if (n == 1) c = '#030'
+		if (n >= 2) c = '#090'
+		if (n >= 5) c = '#009'
+		if (n >=10) c = '#99F'
+		if (n >=14) c = '#900'
+		if (n >=20) c = '#F00'
+	}
 	return c
 }
 
@@ -70,10 +58,6 @@ function make_popup(a)
 	if (a.tags['building'] == 'apartments') st += '<b>Многоэтажный жилой дом</b><br><br>'
 	if (a.tags['building'] == 'yes')        st += '<b>Здание</b><br><br>'
 
-	if (!(x=a.tags['building:architecture']))
-		st += 'Стиль: <b>не указан</b><br>'
-	else
-		st += 'Стиль: <b>'+(architecure[x]?architecure[x].title:x)+'</b><br>'
 
 	if (a.tags['building:levels'])
 		st += 'Этажей: <i>'+a.tags['building:levels']+'</i><br>'
@@ -91,7 +75,7 @@ function draw()
 {
 	if (map.getZoom() >= 16)
 	{
-		osm.search({'building:architecture':true, bounds: map.getBounds().toBBoxString().split(','), way: true, relation: true}, function(data){
+		osm.search({'building':true, bounds: map.getBounds().toBBoxString().split(','), way: true, relation: true}, function(data){
 			if (!data.length) return $('info', 'Нет данных')
 			$('info', 'Данные загружены')
 			var i, a
@@ -109,7 +93,7 @@ function draw()
 	} else
 		msg = 'Для отображения данных необходимо увеличить масштаб карты.<br>'
 			+' <a href="https://forum.openstreetmap.org/viewtopic.php?pid=635464">Отзывы</a> и'
-			+' <a href="https://wiki.openstreetmap.org/wiki/RU:Key:building:architecture">Справка по разметке</a>';
+			+' <a href="https://wiki.openstreetmap.org/wiki/RU:Key:building:levels">Справка по разметке</a>';
 
 	$('info', msg)
 }

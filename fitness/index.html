@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Спорт и фитнес на карте OSM</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+	<script src="/i/common.js"></script>
+
+	<style>
+		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+		i     { white-space: pre; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<div id="map"></div>
+
+<script>
+var lines = {}, circles = {}
+osm.search_region = 20
+var map = map.init()
+
+function parse(a, field)
+{
+	switch (field)
+	{
+		case 'opening_hours':
+			let st = a[field]
+			const t = {'Mo-Fr': 'Будни', 'Sa-Su': 'Выходные', 'Mo':'Пн', 'Tu':'Вт', 'We': 'Ср', 'Th': 'Чт', 'Fr': 'Пт', 'Sa': 'Сб', 'Su': 'Вс'}
+			for (i in t) st = st.replace(i, t[i])
+			return st.toLowerCase()
+		case 'contact:website':
+			let domain = 'сайт'
+			try {
+				domain = new URL(a[field])['hostname'].replace('www.', '')
+			} catch(e) {}
+			return '<a href="'+a[field]+'">'+domain+'</a>'
+		case 'contact:vk':
+			return '<a href="'+a[field]+'">ВКонтакте</a>'
+	}
+	return ''
+}
+
+/** содержимое popup на здании */
+function make_popup(a)
+{
+	var x, st = ''
+
+	if (a.tags[x='name'])
+		st += '<b>'+a.tags[x]+'</b><br>'
+	else
+	{
+		if (a.tags['leisure'] == 'sports_centre')
+			st += '<b>Спортивный клуб</b><br>'
+		if (a.tags['leisure'] == 'fitness_centre')
+			st += '<b>Фитнес клуб</b><br>'
+		if (a.tags['leisure'] == 'fitness_station')
+			st += '<b>Площадка для занятия спортом</b><br>'
+	}
+
+	if (a.tags[x='brand'])
+		st += 'Бренд: <i>'+a.tags[x]+'</i><br>'
+
+	var tags = []
+	if (a.tags[x='swimming_pool']    && a.tags[x] == 'yes') tags.push('бассейн')
+	if (a.tags[x='sauna']            && a.tags[x] == 'yes') tags.push('сауна')
+	if (a.tags[x='personal_trainer'] && a.tags[x] == 'yes') tags.push('персональный тренер')
+	if (tags.length)
+		st += 'Есть: <i>'+tags.join('</i>, <i>')+'</i><br>'
+
+	if (a.tags[x='wheelchair'] == 'yes')
+		st += 'Адаптировано для людей с ограниченными возможностями<br>'
+
+	if (a.tags[x='opening_hours'])
+		st += 'Часы работы: <i>'+parse(a.tags, x)+'</i><br>'
+
+	if (a.tags[x='sport'])
+		st += 'Спорт: <i>'+a.tags[x]+'</i><br>'
+
+	if (a.tags[x='contact:phone'])
+		st += 'Телефон: <a href="tel:+'+a.tags[x].replace(/\D/g, '')+'">'+a.tags[x]+'</a><br>'
+
+	var tags = []
+	if (a.tags[x='contact:website']) tags.push(parse(a.tags, x))
+	if (a.tags[x='contact:vk'])      tags.push(parse(a.tags, x))
+	if (tags.length)
+		st += 'Сайт: '+tags.join(', ')+'<br>'
+
+	if (a.tags[x='operator'])
+		st += 'Организация: <i>'+a.tags[x]+'</i><br>'
+
+	st += osm.editLinks(a)
+
+	return st;
+}
+
+/** основная функция для загрузки и отрисовки геометрии */
+function draw()
+{
+	var ck = 0
+	function _(tag, color='blue', radius=10)
+	{
+		ck++
+		osm.search({...tag, bounds: map.getBounds().toBBoxString().split(','), node:true, way: true, relation: true}, function(data){
+			if (!--ck) $('info', 'Данные загружены')
+			var i, a
+			for (a=data[i=0]; i<data.length; a=data[++i])
+			if (!circles[a.id])
+			{
+				let col = ['yoga', 'gymnastics'].includes(a.tags.sport) ? 'light'+color : color
+				circles[a.id] = L.circleMarker(a.center, {radius, color: col})
+					.bindPopup('', { data: a }).addTo(map)
+			}
+		})
+	}
+
+	if (map.getZoom() >= 10)
+	{
+		_({'leisure': 'fitness_centre'},  'blue')
+		_({'leisure': 'sports_centre'},   'red')
+		_({'leisure': 'fitness_station'}, 'green', 8)
+
+		msg = 'Загрузка...'
+	} else
+		msg = 'Для отображения данных необходимо увеличить масштаб карты.<br>'
+			+' <a href="https://forum.openstreetmap.org/viewtopic.php?pid=635464">Отзывы</a> и'
+			+' <a href="https://wiki.openstreetmap.org/wiki/RU:Tag:leisure%3Dfitness_centre">Справка по разметке</a>';
+
+	$('info', msg)
+}
+
+map.on('moveend', draw)
+draw()
+
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
