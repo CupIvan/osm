@@ -206,7 +206,8 @@ function createEntranceMarker(a)
 	if (a.tags.entrance == 'home')      radius = 3
 	if (a.tags.entrance == 'main')      radius = 3
 
-	var marker = L.circle([a.lat, a.lon], radius, { color: c, weight: 2, fillColor: c, fillOpacity: 0.5, pane: 'circlePane' })
+	var marker = L.circle([a.lat, a.lon], radius, { color: c, weight: 2, fillColor: c,
+			fillOpacity: 0.5, pane: 'circlePane', weight: a.tags.access=='private'?15:3 })
 		.addTo(map)
 		.bindPopup(comment);
 	if (a.tags.ref && stat.n_ref++ < 500)
