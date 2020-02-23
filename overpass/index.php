@@ -3,14 +3,17 @@
 if (strpos(@$_SERVER['HTTP_ORIGIN'], 'cupivan.ru'))
 	header('Access-Control-Allow-Origin: *');
 
+define('DIR', '/tmp/cache/');
+if (!file_exists(DIR)) mkdir(DIR, 0777, true);
+
 $data = @$_GET['data'];
 
-$fname = './cache/'.md5($data).'.json';
+$fname = DIR.md5($data).'.json';
 
 $log = date('H:i:s d.m.Y')." - ".$_SERVER['REMOTE_ADDR'];
 
 // очистка старых кешей каждые ~100 запросов
-if (!mt_rand(0, 100)) { exec('find ./cache/ -mtime +7 -delete'); $log .= " CLEAR"; }
+if (!mt_rand(0, 100)) { exec('find '.DIR.' -mtime +7 -delete'); $log .= " CLEAR"; }
 
 if (file_exists($fname) && filemtime($fname) > time() - 2*3600)
 {
@@ -39,6 +42,6 @@ if (empty($page))
 
 $log .= " - $fname - $data\n";
 
-@file_put_contents('./cache/_'.date('Y-m-d').'.log', $log, FILE_APPEND);
+@file_put_contents(DIR.date('Y-m-d').'.log', $log, FILE_APPEND);
 
 echo $page;
