@@ -33,10 +33,9 @@ var map = map.init()
 var markers = {}, lines = {}
 var stat = {n:0, nk:0, ne: 0, n_ref:0}
 
-var g_osm_objects = {}
+const g_osm_objects = {}, g_streets = {}
 
 map.createPane('circlePane').style.zIndex = 410
-map.on('popupopen', function(e){ if (e.popup.options.osm_id) e.popup.setContent(make_popup(g_osm_objects[e.popup.options.osm_id])); });
 
 /** цвет здания в зависимости от OSM ошибок */
 var color = { ok: '#0F0', warn: '#FF0', error: '#F00', noactive: '#000', blue: '#00F', gray: '#000' };
@@ -46,10 +45,30 @@ function getBuildingColor(a)
 	if (!a.tags['building:levels'])  c = color.warn;
 	if (!a.tags['addr:housenumber']) c = color.error;
 	if ( a.tags['addr:city'] != 'Зеленоград')
-	if (!a.tags['addr:street'] && !a.tags['addr:place']) c = color.error;
+	if (!get_street(a) && !a.tags['addr:place']) c = color.error;
 	if (!a.entrances.length)         c = color.error;
 	if (a.tags['building:part'])     c = color.gray;
 	return c
+}
+
+/** обновление цвета здания */
+function update_build_color(osm_id)
+{
+	if (!g_osm_objects[osm_id]) return
+	if (!lines[osm_id]) return
+	const color = getBuildingColor(g_osm_objects[osm_id]);
+	lines[osm_id].setStyle({color, fillColor: color })
+}
+
+/** улица у объекта */
+function get_street(a)
+{
+	var x
+	if (x = a.tags['addr:street']) return x
+	if (x = g_streets['w'+a.id])
+	if (x = g_osm_objects[x])
+	if (x = x.tags['name']) return x
+	return ''
 }
 
 var calcFlats = function(x)
@@ -215,15 +234,14 @@ function make_popup(a)
 	if (a.tags['addr:city'])
 		st += 'Город: <i>'+a.tags['addr:city']+'</i><br>'
 
-	if ( a.tags['addr:city'] != 'Зеленоград') // у Зеленограда нумерация без улицы
-	if (!a.tags['building:part']) // улица пишется на основном контуре
-	if (!a.tags['addr:street'])
-	{
+	{let x
+	if (a.tags['addr:city'] != 'Зеленоград') // у Зеленограда нумерация без улицы
+	if (x = get_street(a))
+		st += 'Улица: <i>'+x+'</i><br>'
+	else
 		if (!a.tags['addr:place'])
 			st += 'Укажите улицу <b>addr:street</b><br>'
 	}
-	else
-		st += 'Улица: <i>'+a.tags['addr:street']+'</i><br>'
 
 	if (!a.tags['building:part']) // дом пишется на основном контуре
 	if (!a.tags['addr:housenumber'])
@@ -253,9 +271,9 @@ function draw_entrance()
 	if (map.getZoom() >= 16)
 	{
 		var ck = 0, ck_max = 0
-		var _ = function(data){
+		function _(data){
 			if (!data.length) return $('info', 'Нет данных')
-			$('info', 'Данные загружены '+Math.round(ck/3*100)+'%')
+			$('info', 'Данные загружены '+Math.round(++ck/ck_max*100)+'%')
 
 			var i, a, node
 			for (a=data[i=0]; i<data.length; a=data[++i])
@@ -267,29 +285,36 @@ function draw_entrance()
 				{
 					a.entrances.push(a.nodes[j].tags)
 					node = a.nodes[j]
-					if (!markers[node.id])
-						markers[node.id] = createEntranceMarker(node)
+					if (!markers[node.osm_id])
+						markers[node.osm_id] = createEntranceMarker(node)
 				}
 
-				g_osm_objects[a.id] = a
+				g_osm_objects[a.osm_id] = a
 
 				c = getBuildingColor(a)
-				if (!lines[a.id] && c)
+				if (!lines[a.osm_id] && c)
 				if (data[i].tags['type'] != 'building') // type == building пропускаем, т.к. будет builging:part
-				lines[a.id] = L.geoJSON(a.geoJSON, {style: {color: c, weight: 2, fillColor: c }})
+				lines[a.osm_id] = L.geoJSON(a.geoJSON, {style: {color: c, weight: 2, fillColor: c }})
 					.addTo(map)
 					.bindPopup('', { data: data[i] })
 			}
 		}
-		osm.search({'building': 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
-			ck++; _(data)
-		})
-		osm.search({'building': 'dormitory', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
-			ck++; _(data)
-		})
-		osm.search({'building:part': 'apartments', bounds: map.getBounds().toBBoxString().split(','), 'way': true, 'relation': true}, function(data){
-			ck++; _(data)
-		})
+		function s(a, handler=()=>{}){
+			ck_max++
+			a.bounds = map.getBounds().toBBoxString().split(',')
+			osm.search(a, a => {_(a); handler(a)})
+		}
+		s({'type': 'associatedStreet',    'relation': true},
+			a => a.map(a=>a.members.map(m=> {
+				if (m.role!='house') return
+				const id='w'+m.ref
+				g_streets[id] = 'r'+a.id
+				update_build_color(id)
+			}))
+		)
+		s({'building': 'apartments',      'relation': true, 'way': true})
+		s({'building': 'dormitory',       'relation': true, 'way': true})
+		s({'building:part': 'apartments', 'relation': true, 'way': true})
 		msg = 'Загрузка...';
 	} else
 		msg = 'Для отображения подъездов необходимо увеличить масштаб карты. <a href="https://forum.openstreetmap.org/viewtopic.php?pid=635464">Отзывы тут</a>.';

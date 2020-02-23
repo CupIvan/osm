@@ -64,6 +64,7 @@ search: function(filter, handler){
 		for (i = 0; i < x.elements.length; i++)
 		{
 			a = x.elements[i]
+			a.osm_id = a.type[0] + a.id
 			if (a.tags)
 			for (j in filter)
 			if (j == 'id')
