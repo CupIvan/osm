@@ -4,9 +4,9 @@ var josm = {
 	running: false, // запущен ли редактор
 
 	/** иконка со ссылкой на объект */
-	icon: function(id, type)
+	icon: function(id)
 	{
-		if (!type) type = josm.getType(id)
+		var type = osm.getType(id)
 
 		var url = 'http://www.openstreetmap.org/browse/'+type+'/'+id
 
@@ -22,16 +22,14 @@ var josm = {
 	/** ссылка на объект */
 	link: function(a = {})
 	{
-		var type = a.type
-		if (!type) type = osm.getType(a.id)
+		var type = osm.getType(a)
 		if (!type) return null
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id
 	},
 	/** ссылка на изменение параметров */
 	link_edit: function(a, params)
 	{
-		var type = a.type
-		if (!type) type = osm.getType(a.id)
+		var type = osm.getType(a)
 		var i, tags = ''
 		for (i in params) tags += (tags?'%7C':'')+i+'='+encodeURIComponent(params[i])
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id+'&addtags='+tags

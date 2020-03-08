@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Границы районов на карте OSM</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+	<script src="/i/common.js"></script>
+
+	<style>
+		#map  { width: 100%; height: 100%; position: absolute; left: 0; top: 0; }
+		#info { position: absolute; left: 50%; margin-left: -300px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+<div id="map"></div>
+
+<script>
+var map = map.init()
+var g_num_regions = 0;
+
+/** содержимое popup на здании */
+function make_popup(a)
+{
+	var x, st = '', tags = a.properties
+
+	if (tags[x='name'])
+		st += '<b>'+tags[x]+'</b><br>'
+
+	if (tags[x='ref'])
+		st += 'Код: <b>'+tags[x]+'</b><br>'
+
+	st += osm.editLinks(a)
+
+	if (tags[x='wikipedia'])
+		st += '  |  <a href="https://wikipedia.org/wiki/'+tags[x]+'" target="_blank">Википедия</a><br>'
+
+	return st;
+}
+
+/** подсказка */
+function update_hint()
+{
+	document.querySelector('#info').innerHTML = ok(`Загружен(|о) ${g_num_regions} регион(|а|ов)`)
+}
+
+var colors = ['#F00','#0F0','#00F','#FF0','#0FF','#F0F','#000','#F99','#9F9','#99F','#FF9','#9FF','#F9F']
+var colors_r = {}, colors_n = 0
+var _get_color = function(x){
+	if (colors_r[x]) return colors_r[x]
+	return colors_r[x] = colors[(colors_n++)%(colors.length)]
+}
+
+// загружаем регионы
+fetch('./geojson/all.json')
+.then(x=>x.json())
+.then(a=>{
+	for (let i=0; i<a.length; i++)
+		fetch(a[i]).then(x=>x.json()).then(geo=>{
+			L.geoJSON(geo, {color: _get_color(geo.id)}).bindPopup('', { data: geo }).addTo(map)
+			g_num_regions++
+			update_hint()
+		})
+})
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>

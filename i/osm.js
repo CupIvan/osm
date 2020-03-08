@@ -202,24 +202,35 @@ search: function(filter, handler){
 },
 
 /** ссылка на объект */
-link: function(id, type)
+link: function(a)
 {
-	if (!type) type = osm.getType(id)
-	return type ? 'http://www.openstreetmap.org/browse/'+type+'/'+id : ''
+	const {type, id} = osm.parseId(a)
+	return 'https://www.openstreetmap.org/'+type+'/'+id
+},
+/** ссылка на объект в редакторе level0 */
+link_level0: function(a)
+{
+	const {type, id} = osm.parseId(a)
+	return 'http://level0.osmz.ru/?url='+type+'/'+id
+},
+/** тип и id объекта */
+parseId: function(a)
+{
+	return {type: osm.getType(a), id: (''+(typeof(a)=='object'?a.id:a)).replace(/\D/g, '')}
 },
 /** тип объекта */
-getType: function(id)
+getType: function(a)
 {
-	if (!id) return null
+	if (!a) return null
 
-	var type; id += ''
+	const id = '' + (typeof(a) == 'object' ? a.id : a)
 
-	if (id.charAt(0) == 'n') type = 'node'
-	if (id.charAt(0) == 'w') type = 'way'
-	if (id.charAt(0) == 'r') type = 'relation'
+	var type = 'node'
 
-	id = id.replace(/\D/g, '')
-	if (!type) type = 'node'
+	if (id[0] == 'n') type = 'node'
+	if (id[0] == 'w') type = 'way'
+	if (id[0] == 'r') type = 'relation'
+
 	return type
 },
 
@@ -227,8 +238,9 @@ getType: function(id)
 editLinks: function(a, params)
 {
 	const res = []
+
 	let url
-	if (url = osm.link(a.id, a.type))
+	if (url = osm.link(a))
 		res.push('<a target="_blank" href="'+url+'">OSM</a>')
 	if (josm.running)
 	{
@@ -244,8 +256,8 @@ editLinks: function(a, params)
 				res.push(' (<a target="josm" href="'+url+'" onclick="osm.onEdit()">Правка</a>)')
 		}
 	}
-	if (a.type && a.id)
-		res.push('<a target="_blank" href="http://level0.osmz.ru/?url='+a.type+'/'+a.id+'">level0</a>')
+	if (url = osm.link_level0(a))
+		res.push('<a target="_blank" href="'+url+'">level0</a>')
 	return res.length ? '<hr><small>'+res.join('   |   ') : ''
 },
 onEdit: function()
