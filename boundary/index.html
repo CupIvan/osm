@@ -42,6 +42,10 @@ function make_popup(a)
 	if (tags[x='ref'])
 		st += 'Код: <b>'+tags[x]+'</b><br>'
 
+	st += 'Скачать JSON:'
+		+ ' <a href="'+a.fname.replace('simple', 'full')+'">Полный</a>,'
+		+ ' <a href="'+a.fname+'">Упрощённый</a><br>'
+
 	st += osm.editLinks(a)
 
 	if (tags[x='wikipedia'])
@@ -69,6 +73,7 @@ fetch('./geojson/all.json')
 .then(a=>{
 	for (let i=0; i<a.length; i++)
 		fetch(a[i]).then(x=>x.json()).then(geo=>{
+			geo.fname = a[i]
 			L.geoJSON(geo, {color: _get_color(geo.id)}).bindPopup('', { data: geo }).addTo(map)
 			g_num_regions++
 			update_hint()

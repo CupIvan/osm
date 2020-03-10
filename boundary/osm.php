@@ -1,7 +1,7 @@
 <?php
 
 /** формирование GeoJSON по данным из OSM */
-function osm_make_boundary($id, $a)
+function osm_make_boundary($id, $a, $is_simple = true)
 {
 	if (empty($a['elements'])) return false;
 
@@ -26,9 +26,14 @@ function osm_make_boundary($id, $a)
 			$geo['id']   = $a['type'][0].$id;
 			$geo['properties'] = $a['tags'];
 			$refs = [];
-			foreach ($a['members'] as $a)
-			if ($a['type'] == 'way' && $a['role'] == 'outer')
-				$refs[] = $a['ref'];
+			// внешние границы
+			foreach ($a['members'] as $_)
+			if ($_['type'] == 'way' && $_['role'] == 'outer')
+				$refs[] = $_['ref'];
+			// добавляем полигоны-дырки
+			foreach ($a['members'] as $_)
+			if ($_['type'] == 'way' && $_['role'] == 'inner')
+				$refs[] = $_['ref'];
 
 			// сортировка линий
 			$sort_refs = function($refs) use($ways, $nodeFrom, $nodeTo)
@@ -78,8 +83,7 @@ function osm_make_boundary($id, $a)
 
 			$lastNode = NULL;
 			$refs = $sort_refs($refs);
-//			print_r($refs);
-			$geo['coordinates'] = osm_fill_coords($refs, $ways, $nodes);
+			$geo['coordinates'] = osm_fill_coords($refs, $ways, $nodes, $is_simple);
 			break;
 		}
 	}
@@ -87,22 +91,25 @@ function osm_make_boundary($id, $a)
 }
 
 /** заполнение координат */
-function osm_fill_coords($a, $ways, $nodes)
+function osm_fill_coords($a, $ways, $nodes, $is_simple = true)
 {
 	foreach ($a as $i => $_)
-		$a[$i] = [osm_fill_way_coords($_, $ways, $nodes)];
+		$a[$i] = [osm_fill_way_coords($_, $ways, $nodes, $is_simple)];
 	return $a;
 }
 
 /** заполнение координат для массива линий */
-function osm_fill_way_coords($a, $ways, $nodes)
+function osm_fill_way_coords($a, $ways, $nodes, $is_simple = true)
 {
 	$res = []; $lastNode = NULL;
+	static $cache = [];
 	for ($i=0; $i<count($a); $i++)
 	{
 		$wayId = $a[$i];
 		$w = $ways[$wayId];
 		$xxx = osm_get_nodes($wayId, $ways, $nodes);
+		if ($is_simple)
+			$xxx = @$cache[$wayId] ?: $cache[$wayId] = osm_simple_nodes($xxx);
 
 		// проверяем нужно ли переворачивать первую линию
 		if (is_null($lastNode))
@@ -133,7 +140,7 @@ function osm_get_nodes($wayId, $ways, $nodes)
 {
 	$res = [];
 	$a = $ways[$wayId];
-	for ($i = 0; $i < count($a); $i++)
+	for ($i = 0; $i < count($a)-1; $i++)
 	if (!empty($nodes[$a[$i]]))
 		$res[] = $nodes[$a[$i]];
 	else
@@ -170,4 +177,37 @@ function osm_get_subareas($a)
 		if ($a['role'] == 'subarea')
 			$res[] = $a['ref'];
 	return $res;
+}
+
+/** упрощение ломанной */
+function osm_simple_nodes($a)
+{
+	// для каждой точки высчитываем площадь треугольника, относительно соседних вершин
+	// и выкидываем точку с минимальной площадью
+	while (true)
+	{
+		$s_min = null; $s_i = 0; $s_n = 0;
+		for ($i=1; $i<count($a)-1; $i++)
+		{
+			$s = osm_calc_square($a[$i-1], $a[$i], $a[$i+1]);
+			if ($s > 1) continue;
+			if (is_null($s_min) || $s < $s_min) { $s_min = $s; $s_i = $i; $s_n++; }
+		}
+		if (!$s_n) break;
+		array_splice($a, $s_i, 1); // удаляем эту точку
+		if (count($a) < 10) break;
+	}
+
+	return $a;
+}
+
+/** площадь треугольника по координатам x2 */
+// https://m.fxyz.ru/4/279/280/302/904/
+function osm_calc_square($x, $y, $z)
+{
+	$x1 = $x[0]; $y1 = $x[1];
+	$x2 = $y[0]; $y2 = $y[1];
+	$x3 = $z[0]; $y3 = $z[1];
+	$s = ($x1-$x3)*($y2-$y3) - ($y1-$y3)*($x2-$x3);
+	return abs($s);
 }

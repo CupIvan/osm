@@ -3,7 +3,8 @@
 
 define('CACHE_DIR', '/tmp/cache/osm');
 @mkdir(CACHE_DIR,   0777, true);
-@mkdir('./geojson', 0777, true);
+@mkdir('./geojson/full',   0777, true);
+@mkdir('./geojson/simple', 0777, true);
 
 require_once 'osm.php';
 
@@ -21,10 +22,12 @@ $all = [];
 foreach ($regions as $id)
 {
 	echo "Make #$id... ";
-	$geo = osm_make_boundary($id, osm_get_relation($id, true));
+	$geo = osm_make_boundary($id, osm_get_relation($id, true), false);
 	$fname = @$geo['properties']['ref'];
 	if (!$fname) $fname = $geo['id'];
-	file_put_contents($fname = './geojson/'.$fname.'.json', json_encode($geo, JSON_UNESCAPED_UNICODE));
+	file_put_contents('./geojson/full/'.$fname.'.json', json_encode($geo, JSON_UNESCAPED_UNICODE));
+	$geo = osm_make_boundary($id, osm_get_relation($id, true), true);
+	file_put_contents($fname = './geojson/simple/'.$fname.'.json', json_encode($geo, JSON_UNESCAPED_UNICODE));
 	echo "$fname [OK]\n";
 	$all[] = $fname;
 	file_put_contents('./geojson/all.json', json_encode($all));
