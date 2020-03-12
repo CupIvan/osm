@@ -29,7 +29,7 @@
 
 <script>
 var map = map.init()
-var g_num_regions = 0;
+var g_stat = {resp:0, krai:0, obl:0, gorod:0, okrug:0, other:0}
 
 /** содержимое popup на здании */
 function make_popup(a)
@@ -57,7 +57,17 @@ function make_popup(a)
 /** подсказка */
 function update_hint()
 {
-	document.querySelector('#info').innerHTML = ok(`Загружен(|о) ${g_num_regions} регион(|а|ов)`)
+	var x, st = ''
+	x = 'resp'; if (g_stat[x]) st += ok(`, ${g_stat[x]} республик(а|и|)`)
+	x = 'krai'; if (g_stat[x]) st += ok(`, ${g_stat[x]} кра(й|я|ёв)`)
+	x = 'obl';  if (g_stat[x]) st += ok(`, ${g_stat[x]} област(ь|и|ей)`)
+	x = 'gorod';if (g_stat[x]) st += ok(`, ${g_stat[x]} город(|а|ов) федерального значения`)
+	x = 'okrug';if (g_stat[x]) st += ok(`, ${g_stat[x]} автономн(ый|ых) округ(|а|ов)`)
+	x = 'other';if (g_stat[x]) st += ok(`, ${g_stat[x]} неопознанн(ый|ых) контур(|а|ов)`)
+	st = st.replace(/,/, '')
+	st = st.replace(/,([^,]+)$/, ' и $1')
+	st = '<a href="https://ru.wikipedia.org/wiki/Субъекты_Российской_Федерации" target="_blank">Загружено</a>:' + st
+	document.querySelector('#info').innerHTML = st
 }
 
 var colors = ['#F00','#0F0','#00F','#FF0','#0FF','#F0F','#000','#F99','#9F9','#99F','#FF9','#9FF','#F9F']
@@ -75,7 +85,13 @@ fetch('./geojson/all.json')
 		fetch(a[i]).then(x=>x.json()).then(geo=>{
 			geo.fname = a[i]
 			L.geoJSON(geo, {color: _get_color(geo.id)}).bindPopup('', { data: geo }).addTo(map)
-			g_num_regions++
+			let x = geo.properties.official_name || geo.properties.name
+			if (x.indexOf('Республика')   != -1) g_stat.resp++
+			else if (x.indexOf('область') != -1) g_stat.obl++
+			else if (x.indexOf('край')    != -1) g_stat.krai++
+			else if (x.indexOf('округ')   != -1) g_stat.okrug++
+			else if (x.indexOf('город')   != -1) g_stat.gorod++
+			else g_stat.other++
 			update_hint()
 		})
 })
