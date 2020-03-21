@@ -15,19 +15,44 @@ init: function(params){
 	for (i = 0; i < t.length; i++) { a = t[i].split('='); params[a[0]] = a[1]; }
 
 	// или пробуем загрузить последние координаты
-	if (!params[i='lat'] && (t=localStorage.getItem(i))) params[i] = t
-	if (!params[i='lon'] && (t=localStorage.getItem(i))) params[i] = t
-	if (!params[i='z']   && (t=localStorage.getItem(i))) params[i] = t
+	if (!params[i='lat']  && (t=localStorage.getItem(i))) params[i] = t
+	if (!params[i='lon']  && (t=localStorage.getItem(i))) params[i] = t
+	if (!params[i='z']    && (t=localStorage.getItem(i))) params[i] = t
+	if (!params[i='layer']&& (t=localStorage.getItem(i))) params[i] = t
 
-	var map = L.map(params.id||'map').setView([params.lat||55.74, params.lon||37.62], params.z||11)
+	const maps = {
+		'Mapnik':
+			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+				maxZoom: 20,
+				maxNativeZoom: 18,
+			}),
+		'Graystyle':
+			L.tileLayer('https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+				maxZoom: 20,
+				maxNativeZoom: 18,
+			}),
+		'German':
+			L.tileLayer('http://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+				maxZoom: 20,
+				maxNativeZoom: 18,
+			}),
+		'France':
+			L.tileLayer('http://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+				maxZoom: 20,
+				maxNativeZoom: 18,
+			}),
+	}
+
+	var map = L.map(params.id||'map', {zoomControl: false, layers: [maps[params.layer||'Mapnik']]}).setView([params.lat||55.74, params.lon||37.62], params.z||11)
+
+	L.control.layers(maps, {}, {position: 'topleft'}).addTo(map)
+	L.control.zoom().addTo(map);
 
 	if (!params.lat && document.location.protocol == 'https:') map.locate()
-
-	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		attribution: '&copy; <a href="http://openstreetmap.org/copyright">OpenStreetMap</a>',
-		maxZoom: 20,
-		maxNativeZoom: 18,
-	}).addTo(map)
 
 	map.on('popupopen', function(e){ if (window.make_popup != undefined) e.popup.setContent(window.make_popup(e.popup.options.data, e.popup._source)) })
 
@@ -53,6 +78,11 @@ init: function(params){
 		localStorage.setItem('lon', a.lng)
 		localStorage.setItem('z',   map.getZoom())
 	})
+
+	map.on('baselayerchange', function(layer){
+		localStorage.setItem('layer', layer.name)
+	})
+
 	return map
 }
 }
