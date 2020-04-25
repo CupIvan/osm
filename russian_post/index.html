@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Отделения Почты России на карте OSM</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/map.js"></script>
+
+	<style>
+		#info { position: absolute; left: 50%; margin-left: -150px; width: 600px; text-align: center;
+			padding: 10px 20px; background: #DDD; border: 2px solid #000; opacity: 0.9; z-index: 999; }
+		.ref  { font-weight: bold; box-shadow: none; border: 0; background: none; }
+	</style>
+</head>
+
+<body>
+
+<div id="info"></div>
+
+<style>
+	table.t { border: 2px solid #777; border-collapse: collapse; }
+	table.t td,
+	table.t th { padding: 0px 5px; }
+	table.t th { background: #EEE; }
+	table.t tr:nth-child(odd) td { background: #FAFAFA; }
+	table.t tr:hover td          { background: #F0F0F0; }
+	table.t .active              { outline: 2px solid #777; }
+	table.t td                   { cursor: pointer; }
+</style>
+<style>
+	#outer { width: 100%; height: 100%; left: 0; top: 0; position: absolute; }
+	#column { width: 300px; }
+</style>
+<table id="outer">
+<tr>
+	<td id="column">
+	<td id="map">
+</tr>
+</table>
+
+
+<script>
+osm.search_region = 5
+
+const lines = {}, circles = {}
+var map = map.init()
+
+const main_tags = {
+	'brand':           'Почта России',
+	'operator':        'АО «Почта России»',
+	'contact:website': 'https://www.pochta.ru',
+}
+
+const colors = {
+	'ok':        'blue',
+	'pre_ok':    'darkblue',
+	'mistake':   'orange',
+	'not_rp':    'black',
+	'highlight': 'red',
+}
+
+/** содержимое popup */
+function make_popup(a, marker)
+{
+	var x, st = ''
+
+	function _(x)
+	{
+		let is_ok = true, right_value = main_tags[x]
+		if (x == 'name')
+		{
+			let re = /([А-Я][а-я-]+ )+\d{6}$/.exec(a.tags[x])
+			is_ok = re ? true : false
+			right_value = 'НазваниеГорода Индекс'
+		}
+		else
+			is_ok = a.tags[x] == right_value
+
+		const st = is_ok
+			? ''
+			: `title='Ожидается: "${right_value}"' style="background: ${colors.mistake}"`
+		console.log([x, a.tags[x]])
+		return ` ${st}>`+(a.tags[x]||'')
+	}
+
+	if (a.tags[x='name'])
+		st += '<b'+_(x)+'</b><br>'
+
+	st += '<table>'
+
+	st += '<tr><td>Брэнд:<td'+_('brand')
+	st += '<tr><td>Организация:<td'+_('operator')
+	st += '<tr><td>Сайт:<td'+_('contact:website')
+
+	if (a.tags[x='ref'])
+		st += '<tr><td>'+(a.tags.brand=='Почта России'?'Индекс':'Идентификатор')+'<td>'+a.tags[x]
+
+	if (a.tags[x='rpo_center'] == 'yes')
+		st += '<tr><td>Центр выдачи и приёма посылок:<td>да'
+
+	if (a.tags[x='wheelchair'] == 'yes')
+		st += '<tr><td>Для людей с ограниченными возможностями:<td>да'
+
+	if (a.tags[x='contact:phone'])
+		st += '<tr><td>Телефон:<td><a href="tel:+'+a.tags[x].replace(/\D/g, '')+'">'+a.tags[x]+'</a><br>'
+
+	if (a.tags[x='opening_hours'])
+		st += '<tr><td>Часы работы:<td>'+a.tags[x]
+
+	st = st.replace(/>(https?:\/\/[a-z0-9./]+)/g, '><a href="$1" target="_blank">$1</a>')
+
+	st += '</table>'
+
+	const tags = {'website': ''}
+	// перемещаем phone в contact:phone
+	if (a.tags[x='phone'] && !a.tags['contact:phone'])
+	{
+		tags['contact:phone'] = a.tags[x]
+		tags['phone'] = ''
+	}
+
+	st += osm.editLinks(a, {...tags, ...main_tags, onedit:_=>marker.setStyle({color: colors.pre_ok}) })
+
+	return st
+}
+
+const g_data = {}
+/** добавление элемента на колонку */
+function column_add(a)
+{
+	const tags = a.tags
+	if (!tags.ref) return
+	if (tags.brand && tags.brand != 'Почта России') return
+
+	g_data[a.type+a.id] = a
+	column_update()
+}
+
+/** обновление колонки */
+function column_update()
+{
+	let st = ''
+	st += '<div style="overflow-y: scroll; height: 100%;">'
+
+	st += '<table class="t"><tr><th>Индекс</th><th>Название</th></tr>'
+
+	const tmp = []
+
+	// сортируем по индексу
+	let t, i
+	for (i in g_data)
+		tmp.push({center: g_data[i].center, ...g_data[i].tags})
+
+	tmp.sort(function(x, y){ return x.ref.localeCompare(y.ref) })
+
+	for (let i=0; i<tmp.length; i++)
+	{
+		st += '<tr onclick="map.panTo(['+tmp[i].center+'])" onmouseover="column_highlight(['+tmp[i].center+'])">'
+			+'<td>'+tmp[i].ref+'</td>'
+			+'<td style="'+(is_mistake(tmp[i])?'background: '+colors.mistake:'')+'">'+(tmp[i].name||'')+'</td></tr>'
+	}
+
+	st += '</table>'
+
+	var el = document.querySelector('#column')
+	if (st != el.innerHTML) el.innerHTML = st
+}
+function column_row(a)
+{
+	return
+}
+
+function is_mistake(a)
+{
+	if (!a.name) return true
+	for (let i in main_tags)
+		if (a[i] != main_tags[i]) return true
+	return false
+}
+
+var hiCirle = null
+/** подсветка текущего объекта */
+function column_highlight(coords)
+{
+	if (!hiCirle) hiCirle = L.circleMarker(coords, {radius: 30, color: colors.highlight}).addTo(map)
+	hiCirle.setLatLng(coords).bringToBack()
+}
+
+/** основная функция для загрузки и отрисовки геометрии */
+function draw()
+{
+	if (map.getZoom() >= 12)
+	{
+		osm.search({'amenity': 'post_office', bounds: map.getBounds().toBBoxString().split(','), node:true}, function(data){
+			if (!data.length) return $('info', 'Нет данных')
+			$('info', 'Данные загружены')
+			var i, a
+			for (a=data[i=0]; i<data.length; a=data[++i])
+			{
+				if (!lines[a.id])
+				lines[a.id] = L.geoJSON(a.geoJSON)
+					.bindPopup('', { data: a })
+				if (!circles[a.id])
+				{
+					let color = colors.not_rp
+					let i, radius = 3
+					for (i in a.tags) if (a.tags[i].indexOf('очта') != -1) radius = 10
+					if (radius == 10)
+						color = is_mistake(a.tags) ? colors.mistake : colors.ok
+					circles[a.id] = L.circleMarker(a.center, {radius, color})
+						.bindPopup('', { data: a }).addTo(map)
+					column_add(a)
+				}
+			}
+		})
+
+		msg = 'Загрузка...'
+	} else
+		msg = 'Для отображения данных необходимо увеличить масштаб карты.<br>'
+			+' <a href="https://forum.openstreetmap.org/viewtopic.php?pid=784448">Отзывы</a> и'
+			+' <a href="https://wiki.openstreetmap.org/wiki/RU:Tag:amenity%3Dpost_office">Справка по разметке</a>';
+
+	$('info', msg)
+}
+
+map.on('moveend', draw)
+draw()
+</script>
+
+<style>
+.legend {
+	background: #BBB;
+	border-radius: 5px;
+	padding: 10px;
+	opacity: 0.8
+}
+.legend i {
+	width: 8px;
+	height: 8px;
+	display: inline-block;
+	margin-right: 4px;
+	opacity: 0.7;
+	border: 3px solid #000;
+	border-radius: 50%;
+	vertical-align: middle;
+}
+</style>
+<script>
+const legend = L.control({position: 'topright'})
+legend.onAdd = function(){
+	var st='', div = document.createElement('div')
+	div.className = 'info legend'
+	st += '<div><i style="border-color: '+colors.ok+'"></i>&ndash; теги в норме</div>'
+	st += '<div><i style="border-color: '+colors.mistake+'"></i>&ndash; есть проблема</div>'
+	st += '<div><i style="border-color: '+colors.not_rp+'"></i>&ndash; это не почта</div>'
+	div.innerHTML = st
+	return div
+}
+legend.addTo(map)
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
