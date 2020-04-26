@@ -1,0 +1,82 @@
+meta {
+	title: "Подсветка адресации";
+	description: "Подсветка домов на одной улице своим цветом";
+	version: "0.4_2012-08-21";
+	author: "CupIvan";
+	link: "https://osm.cupivan.ru/coloured-addresses-ru.mapcss";
+	watch-modified: true;
+}
+
+area[addr:street=~/(^|.+ )А/] { fill-color: #74A0C6; }
+area[addr:street=~/(^|.+ )Б/] { fill-color: #D9BF05; }
+area[addr:street=~/(^|.+ )В/] { fill-color: #D6987A; }
+area[addr:street=~/(^|.+ )Г/] { fill-color: #559B63; }
+area[addr:street=~/(^|.+ )Д/] { fill-color: #B2D8A2; }
+area[addr:street=~/(^|.+ )Е/] { fill-color: #D82BD6; }
+area[addr:street=~/(^|.+ )Ж/] { fill-color: #4328F6; }
+area[addr:street=~/(^|.+ )З/] { fill-color: #43DA2C; }
+area[addr:street=~/(^|.+ )И/] { fill-color: #26CEF5; }
+area[addr:street=~/(^|.+ )К/] { fill-color: #C05821; }
+area[addr:street=~/(^|.+ )Л/] { fill-color: #D20C44; }
+area[addr:street=~/(^|.+ )М/] { fill-color: #5A5381; }
+area[addr:street=~/(^|.+ )Н/] { fill-color: #4C55B2; }
+area[addr:street=~/(^|.+ )О/] { fill-color: #D5BCAB; }
+area[addr:street=~/(^|.+ )П/] { fill-color: #5C1150; }
+area[addr:street=~/(^|.+ )Р/] { fill-color: #40BA8F; }
+area[addr:street=~/(^|.+ )С/] { fill-color: #38FBC5; }
+area[addr:street=~/(^|.+ )Т/] { fill-color: #BCA75B; }
+area[addr:street=~/(^|.+ )У/] { fill-color: #A40A5F; }
+area[addr:street=~/(^|.+ )Ф/] { fill-color: #675E00; }
+area[addr:street=~/(^|.+ )Х/] { fill-color: #0E8481; }
+area[addr:street=~/(^|.+ )Ц/] { fill-color: #D8FBB0; }
+area[addr:street=~/(^|.+ )Ч/] { fill-color: #61843D; }
+area[addr:street=~/(^|.+ )Ш/] { fill-color: #F34177; }
+area[addr:street=~/(^|.+ )Щ/] { fill-color: #51FC40; }
+area[addr:street=~/(^|.+ )Э/] { fill-color: #12EA9A; }
+area[addr:street=~/(^|.+ )Ю/] { fill-color: #A4CB65; }
+area[addr:street=~/(^|.+ )Я/] { fill-color: #B2D3F0; }
+
+/* Жуковский: Гризодубовой - Грищенко */
+area[addr:street=~/(^|.+ )Гриз/] { fill-color: #D4523B; }
+area[addr:street=~/(^|.+ )Грищ/] { fill-color: #C1F7C2; }
+
+/* Рощино: Садовая - Садовый - Советская - Солнечная */
+area[addr:street=~/(^|.+ )Сад/] { fill-color: #B31101; }
+area[addr:street=~/(^|.+ )Сад.+ый/] { fill-color: #1F4586; }
+area[addr:street=~/(^|.+ )Сов/] { fill-color: #078FEC; }
+area[addr:street=~/(^|.+ )Сол/] { fill-color: #8DCBC8; }
+
+/* Рощино: Короткая - Короленко */
+area[addr:street=~/(^|.+ )Корот/] { fill-color: #F9E4B3; }
+area[addr:street=~/(^|.+ )Корол/] { fill-color: #2C7123; }
+
+/* Крымск: Славы - Синёва - Славянская */
+area[addr:street=~/(^|.+ )Слав/]  { fill-color: #07059B; }
+area[addr:street=~/(^|.+ )Син/]   { fill-color: #ACDE26; }
+area[addr:street=~/(^|.+ )Славя/] { fill-color: #BDD2CB; }
+
+/* Крымск: Крупской - Комсомольская */
+area[addr:street=~/(^|.+ )Кр/] { fill-color: #6FC44A; }
+area[addr:street=~/(^|.+ )Ко/] { fill-color: #7B8B68; }
+
+/*
+     FILE ARCHIVED ON 11:20:36 Apr 25, 2013 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 19:07:51 May 01, 2020.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+/*
+playback timings (ms):
+  PetaboxLoader3.datanode: 168.331 (4)
+  exclusion.robots: 0.211
+  exclusion.robots.policy: 0.197
+  captures_list: 309.789
+  esindex: 0.009
+  LoadShardBlock: 197.521 (3)
+  PetaboxLoader3.resolve: 199.26 (2)
+  RedisCDXSource: 93.253
+  CDXLines.iter: 15.107 (3)
+  load_resource: 191.389
+*/
