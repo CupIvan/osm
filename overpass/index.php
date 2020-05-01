@@ -42,7 +42,7 @@ if (empty($page))
 	$log .= 'DOWNLOAD';
 }
 
-$log .= round(strlen($page)/1024)."Kb\t$fname\t$data\n";
+$log .= "\t".round(strlen($page)/1024)."Kb\t$fname\t$data\n";
 
 @file_put_contents(DIR.date('Y-m-d').'.log', $log, FILE_APPEND);
 
