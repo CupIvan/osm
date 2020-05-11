@@ -13,6 +13,7 @@
 	<script src="/i/ajax.js"></script>
 	<script src="/i/osm.js"></script>
 	<script src="/i/map.js"></script>
+	<script src="/i/common.js"></script>
 
 	<style>
 		#info { position: absolute; left: 50%; margin-left: -150px; width: 600px; text-align: center;
@@ -57,14 +58,17 @@ const main_tags = {
 	'brand':           'Почта России',
 	'operator':        'АО «Почта России»',
 	'contact:website': 'https://www.pochta.ru',
+	'brand:wikidata':  'Q1502763',
+	'brand:wikipedia': 'ru:Почта России',
 }
 
 const colors = {
 	'ok':        'blue',
 	'pre_ok':    'darkblue',
-	'mistake':   'orange',
+	'empty':     'yellow',
+	'mistake':   'red',
 	'not_rp':    'black',
-	'highlight': 'red',
+	'highlight': 'orange',
 }
 
 /** содержимое popup */
@@ -72,7 +76,7 @@ function make_popup(a, marker)
 {
 	var x, st = ''
 
-	function _(x)
+	function _(x, default_value='')
 	{
 		let is_ok = true, right_value = main_tags[x]
 		if (x == 'name')
@@ -84,21 +88,23 @@ function make_popup(a, marker)
 		else
 			is_ok = a.tags[x] == right_value
 
-		const st = is_ok
+		const v = {}; v[x] = a.tags[x]
+		const st = is_ok || !is_russian_post(a.tags)
 			? ''
-			: `title='Ожидается: "${right_value}"' style="background: ${colors.mistake}"`
-		console.log([x, a.tags[x]])
-		return ` ${st}>`+(a.tags[x]||'')
+			: `title='Ожидается: "${right_value}"' style="background: ${get_color(v)}"`
+
+		return ` ${st}>`+(a.tags[x]||default_value)
 	}
 
-	if (a.tags[x='name'])
-		st += '<b'+_(x)+'</b><br>'
+	st += '<b'+_('name', '[Название]')+'</b>'
 
 	st += '<table>'
 
 	st += '<tr><td>Брэнд:<td'+_('brand')
 	st += '<tr><td>Организация:<td'+_('operator')
 	st += '<tr><td>Сайт:<td'+_('contact:website')
+	st += '<tr><td>Викидата:<td'+_('brand:wikidata')
+	st += '<tr><td>Википедия:<td'+_('brand:wikipedia')
 
 	if (a.tags[x='ref'])
 		st += '<tr><td>'+(a.tags.brand=='Почта России'?'Индекс':'Идентификатор')+'<td>'+a.tags[x]
@@ -163,9 +169,10 @@ function column_update()
 
 	for (let i=0; i<tmp.length; i++)
 	{
+		const color = get_color(tmp[i])
 		st += '<tr onclick="map.panTo(['+tmp[i].center+'])" onmouseover="column_highlight(['+tmp[i].center+'])">'
 			+'<td>'+tmp[i].ref+'</td>'
-			+'<td style="'+(is_mistake(tmp[i])?'background: '+colors.mistake:'')+'">'+(tmp[i].name||'')+'</td></tr>'
+			+'<td style="'+(color?'background: '+color:'')+'">'+(tmp[i].name||'')+'</td></tr>'
 	}
 
 	st += '</table>'
@@ -173,17 +180,35 @@ function column_update()
 	var el = document.querySelector('#column')
 	if (st != el.innerHTML) el.innerHTML = st
 }
-function column_row(a)
-{
-	return
-}
 
 function is_mistake(a)
 {
-	if (!a.name) return true
+//	if (!a.name) return true
 	for (let i in main_tags)
-		if (a[i] != main_tags[i]) return true
+		if (a[i] && a[i] != main_tags[i]) return true
 	return false
+}
+
+function is_empty(a)
+{
+	for (let i in main_tags)
+		if (!a[i]) return true
+	return false
+}
+
+function is_russian_post(tags)
+{
+	for (i in tags)
+		if (tags[i].indexOf('очта') != -1)
+			return true
+	return false
+}
+
+function get_color(tags)
+{
+	if (is_mistake(tags)) return colors.mistake
+	if (is_empty(tags))   return colors.empty
+	return colors.ok
 }
 
 var hiCirle = null
@@ -210,11 +235,8 @@ function draw()
 					.bindPopup('', { data: a })
 				if (!circles[a.id])
 				{
-					let color = colors.not_rp
-					let i, radius = 3
-					for (i in a.tags) if (a.tags[i].indexOf('очта') != -1) radius = 10
-					if (radius == 10)
-						color = is_mistake(a.tags) ? colors.mistake : colors.ok
+					const color = is_russian_post(a.tags) ? get_color(a.tags) : colors.not_rp
+					const radius = color == colors.not_rp ? 3 : 10
 					circles[a.id] = L.circleMarker(a.center, {radius, color})
 						.bindPopup('', { data: a }).addTo(map)
 					column_add(a)
@@ -259,6 +281,7 @@ legend.onAdd = function(){
 	var st='', div = document.createElement('div')
 	div.className = 'info legend'
 	st += '<div><i style="border-color: '+colors.ok+'"></i>&ndash; теги в норме</div>'
+	st += '<div><i style="border-color: '+colors.empty+'"></i>&ndash; нет все данные</div>'
 	st += '<div><i style="border-color: '+colors.mistake+'"></i>&ndash; есть проблема</div>'
 	st += '<div><i style="border-color: '+colors.not_rp+'"></i>&ndash; это не почта</div>'
 	div.innerHTML = st
