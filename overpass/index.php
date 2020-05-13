@@ -7,6 +7,7 @@ define('DIR', '/tmp/cache_osm/');
 if (!file_exists(DIR)) mkdir(DIR, 0777, true);
 
 $data = @$_GET['data'];
+$data = preg_replace('/\s+/', ' ', $data);
 
 $fname = DIR.md5($data).'.json';
 
