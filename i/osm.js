@@ -223,6 +223,8 @@ getType: function(a)
 {
 	if (!a) return null
 
+	if (a.type) return a.type
+
 	const id = '' + (typeof(a) == 'object' ? a.id : a)
 
 	var type = 'node'
