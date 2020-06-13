@@ -2,6 +2,9 @@
 
 header('Content-type: application/json');
 
+if (empty($_REQUEST['city']))   die('{error: "empty city"}');
+if (empty($_REQUEST['street'])) die('{error: "empty street"}');
+
 $access = array();
 $access[] = 'https://osm.cupivan.ru';
 $access[] = 'https://xn----jtbhabjjheh2cq.xn--p1ai';
@@ -11,9 +14,7 @@ if (!empty($headers['Origin']))
 if (in_array($headers['Origin'], $access))
 	header('Access-Control-Allow-Origin: '.$headers['Origin']);
 
-$city = @$_REQUEST['city'];
-if ($city == 'Нижний Новгород')
-	$bounds='(56.14478445312653,43.73313903808594,56.47235255844717,44.22271728515624)';
+$bounds = get_city_bounds(@$_REQUEST['city']);
 
 if (!$bounds) die('{error: "unknown city"}');
 
@@ -23,17 +24,17 @@ $query = '["building"]';
 
 // раскрываем сокращения
 $addr = str_replace(
-	['ул.',   'пр-д',   'пр-т',     'пер.',     'пер '],
-	['улица', 'проезд', 'проспект', 'переулок', 'переулок'],
+	   ['ул.',   'пр.',    'пр-д',   'пр-т',     'пер.',     'пер ',     'мкр'],
+	$t=['улица', 'проезд', 'проезд', 'проспект', 'переулок', 'переулок', 'микрорайон'],
 	$addr);
 
 // фильтр по улице
-$street = ''; $type = ''; $types = 'переулок|проспект|улица';
-if (preg_match("#($types)\s*([^,]+)#", $addr, $m)) { $street = $m[2]; $type = $m[1]; }
-if (preg_match("#([^,]+)\s*($types)#", $addr, $m)) { $street = $m[1]; $type = $m[2]; }
+$street = ''; $type = ''; $types = implode('|', array_unique($t));
+if (preg_match("#($types)\s*([^,]+)#",  $addr, $m)) { $street = $m[2]; $type = $m[1]; }
+if (preg_match("#([^,]+?)\s*($types)#", $addr, $m)) { $street = $m[1]; $type = $m[2]; }
 
 $reverse = true; // true=улица Героев, false=Садовая улица
-if (preg_match('/(ая|ый)$/', $street)) $reverse = false;
+if (preg_match('/(ая|ый|ий)$/', $street)) $reverse = false;
 $street = $reverse ? "$type $street" : "$street $type";
 
 if ($street)
@@ -124,4 +125,15 @@ function get_center($a, $flat)
 	$center['lon'] /= $n;
 
 	return $center;
+}
+
+
+/** bbox города для поиска адреса */
+function get_city_bounds($city)
+{
+	$lat_min = $lot_min = $lat_max = $lon_max = NULL;
+	if ($city == 'Нижний Новгород')
+		return '(56.14478445312653,43.73313903808594,56.47235255844717,44.22271728515624)';
+	return "(0,0,0,0)";
+	return "($lat_min,$lon_min,$lat_max,$lon_max)";
 }
