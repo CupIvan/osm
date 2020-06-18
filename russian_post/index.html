@@ -60,13 +60,17 @@ const main_tags = {
 	'contact:website': 'https://www.pochta.ru',
 	'brand:wikidata':  'Q1502763',
 	'brand:wikipedia': 'ru:Почта России',
+	'opening_hours':   '',
+	'ref':             '',
 }
 
 const colors = {
 	'ok':        'blue',
+	'ok_t':      '#AAF',
 	'pre_ok':    'darkblue',
 	'empty':     'yellow',
 	'mistake':   'red',
+	'mistake_t': '#FAA',
 	'not_rp':    'black',
 	'highlight': 'orange',
 }
@@ -81,17 +85,21 @@ function make_popup(a, marker)
 		let is_ok = true, right_value = main_tags[x]
 		if (x == 'name')
 		{
-			let re = /([А-Я][а-я-]+ )+\d{6}$/.exec(a.tags[x])
+			let re = /([А-Я][а-яё-]+ )+\d{6}$/.exec(a.tags[x])
 			is_ok = re ? true : false
 			right_value = 'НазваниеГорода Индекс'
 		}
 		else
+		if (right_value)
 			is_ok = a.tags[x] == right_value
 
 		const v = {}; v[x] = a.tags[x]
 		const st = is_ok || !is_russian_post(a.tags)
 			? ''
-			: `title='Ожидается: "${right_value}"' style="background: ${get_color(v)}"`
+			: (right_value
+				? `title='Ожидается: "${right_value}"' style="background: ${get_color(v)}"`
+				: `title='Надо бы заполнить тег ${x}' style="background: ${get_color(v)}"`
+			)
 
 		return ` ${st}>`+(a.tags[x]||default_value)
 	}
@@ -118,8 +126,7 @@ function make_popup(a, marker)
 	if (a.tags[x='contact:phone'])
 		st += '<tr><td>Телефон:<td><a href="tel:+'+a.tags[x].replace(/\D/g, '')+'">'+a.tags[x]+'</a><br>'
 
-	if (a.tags[x='opening_hours'])
-		st += '<tr><td>Часы работы:<td>'+a.tags[x]
+	st += '<tr><td>Часы работы:<td'+_('opening_hours')
 
 	st = st.replace(/>(https?:\/\/[a-z0-9./]+)/g, '><a href="$1" target="_blank">$1</a>')
 
@@ -132,8 +139,11 @@ function make_popup(a, marker)
 		tags['contact:phone'] = a.tags[x]
 		tags['phone'] = ''
 	}
+	let i
+	for (i in main_tags)
+		if (main_tags[i]) tags[i] = main_tags[i]
 
-	st += osm.editLinks(a, {...tags, ...main_tags, onedit:_=>marker.setStyle({color: colors.pre_ok}) })
+	st += osm.editLinks(a, {...tags, onedit:_=>marker.setStyle({color: colors.pre_ok}) })
 
 	return st
 }
@@ -177,15 +187,17 @@ function column_update()
 
 	st += '</table>'
 
+	st = st.replace(new RegExp(colors.ok,      'g'), colors.ok_t)
+	st = st.replace(new RegExp(colors.mistake, 'g'), colors.mistake_t)
+
 	var el = document.querySelector('#column')
 	if (st != el.innerHTML) el.innerHTML = st
 }
 
 function is_mistake(a)
 {
-//	if (!a.name) return true
 	for (let i in main_tags)
-		if (a[i] && a[i] != main_tags[i]) return true
+		if (main_tags[i] && a[i] && a[i] != main_tags[i]) return true
 	return false
 }
 
@@ -246,9 +258,10 @@ function draw()
 
 		msg = 'Загрузка...'
 	} else
-		msg = 'Для отображения данных необходимо увеличить масштаб карты.<br>'
-			+' <a href="https://forum.openstreetmap.org/viewtopic.php?pid=784448">Отзывы</a> и'
-			+' <a href="https://wiki.openstreetmap.org/wiki/RU:Tag:amenity%3Dpost_office">Справка по разметке</a>';
+		msg = `Для отображения данных необходимо увеличить масштаб карты.<br>
+			<a href="https://forum.openstreetmap.org/viewtopic.php?pid=784448">Отзывы</a>
+			· <a href="https://wiki.openstreetmap.org/wiki/RU:Tag:amenity%3Dpost_office">Справка по разметке</a>
+			· <a href="https://www.pochta.ru/offices">Сайт почты</a>`
 
 	$('info', msg)
 }
@@ -281,7 +294,7 @@ legend.onAdd = function(){
 	var st='', div = document.createElement('div')
 	div.className = 'info legend'
 	st += '<div><i style="border-color: '+colors.ok+'"></i>&ndash; теги в норме</div>'
-	st += '<div><i style="border-color: '+colors.empty+'"></i>&ndash; нет все данные</div>'
+	st += '<div><i style="border-color: '+colors.empty+'"></i>&ndash; не все данные</div>'
 	st += '<div><i style="border-color: '+colors.mistake+'"></i>&ndash; есть проблема</div>'
 	st += '<div><i style="border-color: '+colors.not_rp+'"></i>&ndash; это не почта</div>'
 	div.innerHTML = st
