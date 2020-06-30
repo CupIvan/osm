@@ -174,16 +174,26 @@ function column_update()
 	let t, i
 	for (i in g_data)
 		tmp.push({center: g_data[i].center, ...g_data[i].tags})
-
 	tmp.sort(function(x, y){ return x.ref.localeCompare(y.ref) })
 
+	let last_city = '', city_counter = 0, _cnt=x=>x.replace('#', '— '+city_counter)
 	for (let i=0; i<tmp.length; i++)
 	{
+		const city = get_city(tmp[i].name)
+		if (last_city != city)
+		{
+			st = _cnt(st)
+			city_counter = 0
+			st += `<tr><td colspan="2"><i>${city} #</i></td></tr>`
+			last_city = city
+		}
+		city_counter++
 		const color = get_color(tmp[i])
 		st += '<tr onclick="map.panTo(['+tmp[i].center+'])" onmouseover="column_highlight(['+tmp[i].center+'])">'
 			+'<td>'+tmp[i].ref+'</td>'
 			+'<td style="'+(color?'background: '+color:'')+'">'+(tmp[i].name||'')+'</td></tr>'
 	}
+	st = _cnt(st)
 
 	st += '</table>'
 
@@ -221,6 +231,13 @@ function get_color(tags)
 	if (is_mistake(tags)) return colors.mistake
 	if (is_empty(tags))   return colors.empty
 	return colors.ok
+}
+
+function get_city(name)
+{
+	const re = /(.+?) \d{6}/.exec(name)
+
+	return re ? re[1] : '???'
 }
 
 var hiCirle = null
