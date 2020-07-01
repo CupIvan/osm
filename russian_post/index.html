@@ -126,7 +126,7 @@ function make_popup(a, marker)
 	if (a.tags[x='contact:phone'])
 		st += '<tr><td>Телефон:<td><a href="tel:+'+a.tags[x].replace(/\D/g, '')+'">'+a.tags[x]+'</a><br>'
 
-	st += '<tr><td>Часы работы:<td'+_('opening_hours')
+	st += '<tr><td>Часы работы:<td'+_('opening_hours')+' <i class="real_hours"></i>'
 
 	st = st.replace(/>(https?:\/\/[a-z0-9./]+)/g, '><a href="$1" target="_blank">$1</a>')
 
@@ -144,6 +144,53 @@ function make_popup(a, marker)
 		if (main_tags[i]) tags[i] = main_tags[i]
 
 	st += osm.editLinks(a, {...tags, onedit:_=>marker.setStyle({color: colors.pre_ok}) })
+
+	if (a.tags.ref)
+	setTimeout(function(){
+		fetch('parse.php?ref='+a.tags.ref).then(_=>_.json()).then(function(data){
+			const _d = ['', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+			if (!data || !data.workingHours) return
+			const tmp = {}
+
+			// объединяем дни с одинаковым режимом работы
+			for (a of data.workingHours)
+			if (a.beginWorkTime)
+			{
+				let time = a.beginWorkTime+'-'+a.endWorkTime
+				if (a.lunches)
+					time = time.replace('-', '-'+a.lunches[0].beginLunchTime+','+a.lunches[0].endLunchTime+'-')
+				time = time.replace(/(:\d{2}):00/g, '$1')
+				if (!tmp[time]) tmp[time] = []; tmp[time].push(_d[a.weekDayId])
+			}
+
+			// формируем строку opening_hours
+			let time, hours = ''
+			for (time in tmp)
+				hours += (hours?'; ':'') + tmp[time].join(',')+' '+time
+
+			// склеиваем смежные дни
+			for (let i=2; i<_d.length; i++)
+			{
+				let pre = _d[i-1], cur = _d[i]
+				hours = hours.replace(pre+','+cur,     pre+'-'+cur)
+				hours = hours.replace('-'+pre+'-'+cur,     '-'+cur)
+			}
+
+			let el = document.querySelector('.real_hours')
+			if (el.parentNode.innerHTML.indexOf(hours) == -1)
+				el.parentNode.innerHTML += '<span style="color: red">❌</span>'
+					+ '<br>Часы работы <a href="https://pochta.ru/offices/'+data.postalCode+'">изменились</a>:<br>' + hours
+			else
+				el.parentNode.innerHTML += '<span style="color: green">✓</span>'
+
+			// правим ссылку на редактирование
+			try {
+				const el = document.querySelectorAll('[target=josm]')[2]
+				el.href = el.href.replace('&addtags=',
+					'&addtags=opening_hours='+encodeURIComponent(hours)+'%7C')
+			} catch(e){}
+		})
+	}, 500);
 
 	return st
 }
