@@ -51,7 +51,7 @@
 <script>
 osm.search_region = 5
 
-const lines = {}, circles = {}
+const lines = {}, circles = {}, g_ref = {}
 var map = map.init()
 
 const main_tags = {
@@ -83,7 +83,11 @@ function make_popup(a, marker)
 	function _(x, default_value='')
 	{
 		let is_ok = true, right_value = main_tags[x]
-		if (x == 'name')
+
+		if (a.tags.ref && g_ref[a.tags.ref] && g_ref[a.tags.ref][x])
+			right_value = g_ref[a.tags.ref][x]
+
+		if (x == 'name' && !right_value)
 		{
 			let re = /([А-Я][а-яё-]+ )+\d{6}$/.exec(a.tags[x])
 			is_ok = re ? true : false
@@ -142,10 +146,13 @@ function make_popup(a, marker)
 	let i
 	for (i in main_tags)
 		if (main_tags[i]) tags[i] = main_tags[i]
+	if (g_ref[a.tags.ref])
+	for (i in g_ref[a.tags.ref])
+		tags[i] = g_ref[a.tags.ref][i]
 
 	st += osm.editLinks(a, {...tags, onedit:_=>marker.setStyle({color: colors.pre_ok}) })
 
-	if (a.tags.ref)
+	if (a.tags.ref && !g_ref[a.tags.ref])
 	setTimeout(function(){
 		fetch('parse.php?ref='+a.tags.ref).then(_=>_.json()).then(function(data){
 			const _d = ['', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
@@ -153,14 +160,15 @@ function make_popup(a, marker)
 			const tmp = {}
 
 			// объединяем дни с одинаковым режимом работы
-			for (a of data.workingHours)
-			if (a.beginWorkTime)
+			let h
+			for (h of data.workingHours)
+			if (h.beginWorkTime)
 			{
-				let time = a.beginWorkTime+'-'+a.endWorkTime
-				if (a.lunches)
-					time = time.replace('-', '-'+a.lunches[0].beginLunchTime+','+a.lunches[0].endLunchTime+'-')
+				let time = h.beginWorkTime+'-'+h.endWorkTime
+				if (h.lunches)
+					time = time.replace('-', '-'+h.lunches[0].beginLunchTime+','+h.lunches[0].endLunchTime+'-')
 				time = time.replace(/(:\d{2}):00/g, '$1')
-				if (!tmp[time]) tmp[time] = []; tmp[time].push(_d[a.weekDayId])
+				if (!tmp[time]) tmp[time] = []; tmp[time].push(_d[h.weekDayId])
 			}
 
 			// формируем строку opening_hours
@@ -176,19 +184,14 @@ function make_popup(a, marker)
 				hours = hours.replace('-'+pre+'-'+cur,     '-'+cur)
 			}
 
-			let el = document.querySelector('.real_hours')
-			if (el.parentNode.innerHTML.indexOf(hours) == -1)
-				el.parentNode.innerHTML += '<span style="color: red">❌</span>'
-					+ '<br>Часы работы <a href="https://pochta.ru/offices/'+data.postalCode+'">изменились</a>:<br>' + hours
-			else
-				el.parentNode.innerHTML += '<span style="color: green">✓</span>'
-
-			// правим ссылку на редактирование
-			try {
-				const el = document.querySelectorAll('[target=josm]')[2]
-				el.href = el.href.replace('&addtags=',
-					'&addtags=opening_hours='+encodeURIComponent(hours)+'%7C')
-			} catch(e){}
+			// обновляем данные
+			g_ref[data.postalCode] = {
+				name: data.settlement+' '+data.postalCode,
+				opening_hours: hours,
+			}
+			marker._popup.setContent(make_popup(a, marker))
+			marker.setStyle({color: get_color(a.tags)})
+			column_update()
 		})
 	}, 500);
 
@@ -260,6 +263,9 @@ function is_mistake(a)
 {
 	for (let i in main_tags)
 		if (main_tags[i] && a[i] && a[i] != main_tags[i]) return true
+	if (g_ref[a.ref])
+	for (let i in g_ref[a.ref])
+		if (a[i] != g_ref[a.ref][i]) return true
 	return false
 }
 
