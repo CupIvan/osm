@@ -224,6 +224,7 @@ function column_update()
 	tmp.sort(function(x, y){ return x.ref.localeCompare(y.ref) })
 
 	let last_city = '', city_counter = 0, _cnt=x=>x.replace('#', '— '+city_counter)
+	let last_ref = null
 	for (let i=0; i<tmp.length; i++)
 	{
 		const city = get_city(tmp[i].name)
@@ -236,9 +237,13 @@ function column_update()
 		}
 		city_counter++
 		const color = get_color(tmp[i])
+		const ref_hint = last_ref && last_ref!=tmp[i].ref-1
+			? "title='Предыдущий индекс отличается больше чем на 1, возможен пропуск POI!' style='border-top: 2px solid red'"
+			: ""
 		st += '<tr onclick="map.panTo(['+tmp[i].center+'])" onmouseover="column_highlight(['+tmp[i].center+'])">'
-			+'<td>'+tmp[i].ref+'</td>'
+			+`<td ${ref_hint}>`+tmp[i].ref+'</td>'
 			+'<td style="'+(color?'background: '+color:'')+'">'+(tmp[i].name||'')+'</td></tr>'
+		last_ref = tmp[i].ref
 	}
 	st = _cnt(st)
 
