@@ -69,7 +69,7 @@ function make_popup(data)
 		if (josm.running)
 		st += '   <a target="josm" href="'+josm.link(data)+'">Загрузить в JOSM</a>'
 	}
-	if (data.hqs)
+	if (data.hq)
 	{
 		let _h = (x) => {
 			const a={'пн':'Mo','вт':'Tu','ср':'We','чт':'Th','пт':'Fr','сб':'Sa','вс':'Su'}
@@ -82,14 +82,14 @@ function make_popup(data)
 			x = x.replace(/,/g, ';')
 			return x
 		}
-		a = data
-		st += '<h2>'+a.city+'</h2>'
-		st += '<br>Адрес: '+data.hqs[0].address
-		st += '<br>Телефон: '+data.hqs[0].phone.replace(/[^+0-9]/g, '')
-		st += '<br>email: '+data.hqs[0].email
-		st += '<br>Часы работы: '+_h(data.hqs[0].hours)
-		st += '<br>'+data.hqs[0].person
-		data.website = 'https://shtab.navalny.com'+data.hqs[0].page
+		a = data.hq
+		st += '<h2>'+a['addr:city']+'</h2>'
+		st += '<br>Адрес: '+a.address
+		st += '<br>Телефон: '+a['contact:phone'].replace(/[^+0-9]/g, '')
+		st += '<br>email: '+a['contact:email']
+		st += '<br>Часы работы: '+_h(a.state)
+		st += '<br>'+a.person
+		data.website = a['contact:website']
 		st += '<br><br><a href="'+data.website+'">официальная страница</a>'
 		st += '<br><hr><small>Данные с сайта <a href="https://shtab.navalny.com" target="_blank">shtab.navalny.com</a>'
 
@@ -102,22 +102,22 @@ function make_popup(data)
 			var d, di, dmin = -1
 			for (i=0; i<g_points.length;i++)
 			{
-				d = map.distance(g_points[i], data)
+				d = map.distance(g_points[i], data.hq)
 				if (d > 10000) continue // ищем точку на расстоянии не более 5км
 				if (dmin < 0 || d < dmin) { dmin = d; di = i }
 			}
 			if (dmin != -1)
 			{
 				var tags = {
-					'opening_hours': _h(data.hqs[0].hours),
-					'contact:phone': data.hqs[0].phone.replace(/[^+0-9]/g, ''),
-					'contact:website': data.website,
+					'opening_hours': _h(data.hq.state),
+					'contact:phone': data.hq['contact:phone'].replace(/[^+0-9]/g, ''),
+					'contact:website': data.hq['contact:website'],
 				}
-				if (re = data.hqs[0].address.match(/(\d) эт/)) tags['level'] = re[1]
+				if (re = data.hq.address.match(/(\d) эт/)) tags['level'] = re[1]
 				st += '<br>   <a href="'+josm.link_edit(g_points[di], tags)+'" target="josm">Копировать в JOSM</a>'
-				st += '   |   <a href="'+josm.link_zoom(data)+'" target="josm">Открыть в JOSM</a>'
-				L.polyline([data, g_points[di]], {color: 'red'}).addTo(map);
-				if (dmin > 20) map.setZoomAround(data, 16) // зумим, если дальше 20 метров
+				st += '   |   <a href="'+josm.link_zoom(data.hq)+'" target="josm">Открыть в JOSM</a>'
+				L.polyline([data.hq, g_points[di]], {color: 'red'}).addTo(map);
+				if (dmin > 20) map.setZoomAround(data.hq, 16) // зумим, если дальше 20 метров
 			}
 		}
 	}
@@ -136,16 +136,12 @@ function hint()
 function init()
 {
 	ajax('map.php', function(a){
-		var i, j
 		var add_point = function(a){
-			a.lat = a.coords[1]
-			a.lon = a.coords[0]
-			L.circleMarker(a, {radius: a.opened?10:5, color: "#55F"}).addTo(map).bindPopup(0, { data: a })
+			L.circleMarker(a, {radius: a.opened?10:5, color: "#55F"}).addTo(map).bindPopup(0, { data: {hq: a} })
 			stat.n++
 		}
-		for (i in a)
-		for (j=0;j<a[i].length;j++)
-			add_point(a[i][j])
+		for (i=0; i<a.length; i++)
+			add_point(a[i])
 		hint()
 	})
 	osm.search({'name': 'Штаб Алексея Навального', 'node': true}, function(data){
