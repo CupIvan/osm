@@ -56,6 +56,7 @@ const lines = {}, circles = {}, g_ref = {}
 var map = map.init()
 
 const main_tags = {
+	'amenity':         'post_office',
 	'brand':           'Почта России',
 	'operator':        'АО «Почта России»',
 	'contact:website': 'https://www.pochta.ru',
@@ -72,6 +73,7 @@ const colors = {
 	'empty':     'yellow',
 	'mistake':   'red',
 	'mistake_t': '#FAA',
+	'rp':        'blue',
 	'not_rp':    'black',
 	'highlight': 'orange',
 }
@@ -80,6 +82,32 @@ const colors = {
 function make_popup(a, marker)
 {
 	var x, st = ''
+
+	// данные с сайта почты
+	if (a.ref)
+	{
+		st += '<b>'+a.city+' '+a.ref+'</b>'
+
+		st += '<table>'
+		st += '<tr><td>Адрес:</td><td>'+a.address
+		st += '<tr><td>Часы работы:</td><td>'+a.opening_hours
+		st += '</table>'
+
+		st += '<hr>'
+		st += '<small>Данные с <a href="https://pochta.ru/offices/'+a.ref+'" target="_blank">pochta.ru</a> от '+a.date+'</small>'
+		if (josm.running)
+		{
+			let tags = JSON.parse(JSON.stringify(main_tags)) // COMMENT: clone
+			tags['lat']  = a.lat
+			tags['lon']  = a.lon
+			tags['ref']  = a.ref
+			tags['name'] = a.city + ' ' + a.ref
+			tags['opening_hours'] = a.opening_hours
+			st += ' | <a target="josm" href="'+josm.link_node(tags)+'">Добавить в JOSM</a>'
+		}
+
+		return st
+	}
 
 	function _(x, default_value='')
 	{
@@ -352,6 +380,19 @@ function draw()
 			}
 		})
 
+		fetch('get.php?rect='+map.getBounds().toBBoxString()).then(_=>_.json()).then(data=>{
+			var i, a
+			for (a=data[i=0]; i<data.length; a=data[++i])
+			{
+				a.id = 'rp'+a.ref
+				if (!circles[a.id])
+				{
+					circles[a.id] = L.circleMarker(a, {radius: 3, color: colors.rp, weight: 1})
+						.bindPopup('', { data: a }).addTo(map)
+				}
+			}
+		})
+
 		msg = 'Загрузка...'
 	} else
 		msg = `Для отображения данных необходимо увеличить масштаб карты.<br>
@@ -362,7 +403,11 @@ function draw()
 	$('info', msg)
 }
 
-map.on('moveend', draw)
+var g_moveInterval = 0
+map.on('moveend', _=>{
+	clearInterval(g_moveInterval)
+	g_moveInterval = setTimeout(draw, 1500)
+})
 draw()
 </script>
 
@@ -383,6 +428,10 @@ draw()
 	border-radius: 50%;
 	vertical-align: middle;
 }
+.legend i.sm {
+	width: 4px; height: 4px; border-width: 2px;
+	margin-left: 4px; margin-right: 8px;
+}
 </style>
 <script>
 const legend = L.control({position: 'topright'})
@@ -392,7 +441,8 @@ legend.onAdd = function(){
 	st += '<div><i style="border-color: '+colors.ok+'"></i>&ndash; теги в норме</div>'
 	st += '<div><i style="border-color: '+colors.empty+'"></i>&ndash; не все данные</div>'
 	st += '<div><i style="border-color: '+colors.mistake+'"></i>&ndash; есть проблема</div>'
-	st += '<div><i style="border-color: '+colors.not_rp+'"></i>&ndash; это не почта</div>'
+	st += '<div><i style="border-color: '+colors.not_rp+'" class="sm"></i>&ndash; это не почта</div>'
+	st += '<div><i style="border-color: '+colors.rp+'" class="sm"></i>&ndash; данные pochta.ru</div>'
 	div.innerHTML = st
 	return div
 }

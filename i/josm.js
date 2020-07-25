@@ -34,6 +34,15 @@ var josm = {
 		for (i in params) tags += (tags?'%7C':'')+i+'='+encodeURIComponent(params[i])
 		return 'http://127.0.0.1:8111/load_object?objects='+type[0]+a.id+'&addtags='+tags
 	},
+	/** ссылка на создание точки */
+	link_node: function(params)
+	{
+		var i, tags = ''
+		for (i in params)
+		if (i != 'lat' && i != 'lon')
+			tags += (tags?'%7C':'')+i+'='+encodeURIComponent(params[i])
+		return 'http://127.0.0.1:8111/add_node?lat='+params.lat+'&lon='+params.lon+'&addtags='+tags
+	},
 	link_zoom: function(a, delta=0.00001)
 	{
 		if (!a.lat && a.center)
