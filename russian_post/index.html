@@ -360,7 +360,8 @@ function draw()
 {
 	if (map.getZoom() >= 12)
 	{
-		osm.search({'amenity': 'post_office', bounds: map.getBounds().toBBoxString().split(','), node:true}, function(data){
+		osm.search({'amenity': 'post_office', bounds: map.getBounds().toBBoxString().split(','),
+			node:true, way: true, relation: true}, function(data){
 			if (!data.length) return $('info', 'Нет данных')
 			$('info', 'Данные загружены')
 			var i, a
@@ -373,8 +374,10 @@ function draw()
 				{
 					const color = is_russian_post(a.tags) ? get_color(a.tags) : colors.not_rp
 					const radius = color == colors.not_rp ? 3 : 10
-					circles[a.id] = L.circleMarker(a.center, {radius, color})
-						.bindPopup('', { data: a }).addTo(map)
+					circles[a.id] = a.geoJSON && a.geoJSON.type != "Point"
+						? L.geoJSON(a.geoJSON, {style: {color, fillColor: color}})
+						: L.circleMarker(a.center, {radius, color})
+					circles[a.id].bindPopup('', { data: a }).addTo(map)
 					column_add(a)
 				}
 			}
