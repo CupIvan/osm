@@ -83,6 +83,7 @@ const colors = {
 	'mistake':   'red',
 	'mistake_t': '#FAA',
 	'rp':        'blue',
+	'rp_closed': 'yellow',
 	'not_rp':    'black',
 	'highlight': 'orange',
 }
@@ -399,7 +400,8 @@ function draw()
 				a.id = 'rp'+a.ref
 				if (!circles[a.id])
 				{
-					circles[a.id] = L.circleMarker(a, {radius: 3, color: colors.rp, weight: 1})
+					let color = a.opening_hours == 'closed' ? colors.rp_closed : colors.rp
+					circles[a.id] = L.circleMarker(a, {radius: 3, color, weight: 1})
 						.bindPopup('', { data: a }).addTo(map)
 				}
 			}
