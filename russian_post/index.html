@@ -397,6 +397,7 @@ function draw()
 			var i, a
 			for (a=data[i=0]; i<data.length; a=data[++i])
 			{
+				if (a.ref[0] > 6) continue // COMMENT: индексы 7xxxxx-9xxxxx не существуют
 				a.id = 'rp'+a.ref
 				if (!circles[a.id])
 				{
