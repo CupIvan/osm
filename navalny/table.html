@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+
+	<title>Все штабы Алексея Навального в таблице</title>
+
+	<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+	<script src="/i/ok.js"></script>
+	<script src="/i/lib.js"></script>
+	<script src="/i/josm.js"></script>
+	<script src="/i/ajax.js"></script>
+	<script src="/i/osm.js"></script>
+	<script src="/i/common.js"></script>
+
+	<style>
+		td { padding-bottom: 8px; }
+		tr:hover td { background: #EEE; }
+	</style>
+</head>
+
+<body>
+
+<div id="data"></div>
+
+<script src="script.js"></script>
+<script>
+var g_data = [], g_osm = []
+
+/** основная функция для загрузки */
+function init()
+{
+	ajax('map.php', function(a){
+		g_data = a
+		update()
+	})
+	osm.search({'name': 'Штаб Алексея Навального', 'node': true}, function(data){
+		if (!data.length) return
+		g_osm = data
+		update()
+	})
+}
+
+init()
+
+function update()
+{
+	if (!g_data[0] || !g_osm[0]) return
+
+	let tags = {}
+	var _ = (t, x, y, f=_=>_) => {
+		if (f(x)!=f(y)) tags[t] = y
+		return '<span '+(f(x)==f(y)?'':'style="color: red"')+'>'
+			+(x||'')+'</span><br><small>'+y+'</small>'
+	}
+
+	var i, st = '', osm, x
+	st += '<table>'
+	for (i = 0; i<g_data.length; i++)
+	{
+		osm = findOSM(g_data[i])
+		tags = {}
+		st += '<tr>'
+		st += '<td>'+g_data[i]['addr:city']+'<br><small>'+g_data[i]['address']+'</small></td>'
+		st += '<td>'+_(x='contact:phone',   osm.tags[x], g_data[i][x], _=>(''+_).replace(/[^+\d]/g,'').replace(/^8/,'+7'))+'</td>'
+		st += '<td>'+_(x='contact:website', osm.tags[x], g_data[i][x])+'</small></td>'
+		st += '<td>'+_(x='opening_hours',   osm.tags[x], _hours(g_data[i]['state']))+'</small></td>'
+		st += '<td>'+(osm.min_t>0.01?'сдвиг':'')+'</td>'
+		st += '<td><a href="'+josm.link_edit(osm, tags)+'" target="josm">Загрузить</a></td>'
+		st += '</tr>'
+	}
+	st += '</table>'
+	document.querySelector('#data').innerHTML = st
+}
+
+function findOSM(a)
+{
+	var m = x=>x>0?x:-x
+	var i, t, min_i=0, min_t=9
+	for (i=0; i<g_osm.length; i++)
+	{
+		t = m(g_osm[i].lat-a.lat)+m(g_osm[i].lon-a.lon)
+		if (t<min_t) { min_i=i; min_t=t }
+	}
+	g_osm[min_i].min_t = min_t
+	return min_t < 0.1 ? g_osm[min_i] : {tags:{}}
+}
+</script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter13902487 = new Ya.Metrika({id:13902487, enableAll: true, trackHash:true, webvisor:true}); } catch(e) {} }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script>
+<noscript><div><img src="//mc.yandex.ru/watch/13902487" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
+
+</body>
+</html>

@@ -28,6 +28,7 @@
 <div id="info"></div>
 <div id="map"></div>
 
+<script src="script.js"></script>
 <script>
 var map = map.init({lat: 53.814, lon: 55.679, z: 5, update_hash: false})
 var g_points = []
@@ -71,46 +72,33 @@ function make_popup(data)
 	}
 	if (data.hq)
 	{
-		let _h = (x) => {
-			const a={'пн':'Mo','вт':'Tu','ср':'We','чт':'Th','пт':'Fr','сб':'Sa','вс':'Su'}
-			for (let day in a) x = x.replace(new RegExp(day, 'i'), a[day])
-			x = x.replace('открыт ', '')
-			x = x.replace(': ', ' ')
-			x = x.replace(/–/g, '-')
-			x = x.replace(/с /g, '')
-			x = x.replace(/ до /g, '-')
-			x = x.replace(/,/g, ';')
-			return x
-		}
 		a = data.hq
 		st += '<h2>'+a['addr:city']+'</h2>'
 		st += '<br>Адрес: '+a.address
 		st += '<br>Телефон: '+a['contact:phone'].replace(/[^+0-9]/g, '')
 		st += '<br>email: '+a['contact:email']
-		st += '<br>Часы работы: '+_h(a.state)
+		st += '<br>Часы работы: '+_hours(a.state)
 		st += '<br>'+a.person
 		data.website = a['contact:website']
-		st += '<br><br><a href="'+data.website+'">официальная страница</a>'
+		st += '<br><br><a href="'+data.website+'" target="_blank">официальная страница</a>'
 		st += '<br><hr><small>Данные с сайта <a href="https://shtab.navalny.com" target="_blank">shtab.navalny.com</a>'
 
 		// ищем точку OSM для привязки
 		if (josm.running)
 		{
 			var i, a
-			var near = function(a, b) { var dlat=dlon=0.001, _=function(x){return x>0?x:-x};
-				if (_(a.lat-b.lat) < dlat && _(a.lon-b.lon) < dlon) return true; return false }
 			var d, di, dmin = -1
 			for (i=0; i<g_points.length;i++)
 			{
 				d = map.distance(g_points[i], data.hq)
-				if (d > 10000) continue // ищем точку на расстоянии не более 5км
+				if (d > 10000) continue // ищем точку на расстоянии не более 10км
 				if (dmin < 0 || d < dmin) { dmin = d; di = i }
 			}
 			if (dmin != -1)
 			{
 				var tags = {
-					'opening_hours': _h(data.hq.state),
-					'contact:phone': data.hq['contact:phone'].replace(/[^+0-9]/g, ''),
+					'opening_hours': _hours(data.hq.state),
+					'contact:phone': data.hq['contact:phone'].replace(/[^+0-9]/g, '').replace(/\+7(9\d\d)/, '+7 $1 '),
 					'contact:website': data.hq['contact:website'],
 				}
 				if (re = data.hq.address.match(/(\d) эт/)) tags['level'] = re[1]
@@ -129,7 +117,7 @@ var stat={n:0,osm_open:0,osm_close:0}
 function hint()
 {
 	$('info', 'Всего в России '+stat.n+' штаб'+ok(stat.n, '', 'а', 'ов')
-		+', в OSM '+stat.osm_open+', закрыт'+ok(stat.osm_close, '', 'о', 'о')+' '+stat.osm_close)
+		+', в OSM '+stat.osm_open+', закрыт'+ok(stat.osm_close, '', 'о', 'о')+' '+stat.osm_close+' | <a href="table.html">Таблица</a>')
 }
 
 /** основная функция для загрузки и отрисовки геометрии */
