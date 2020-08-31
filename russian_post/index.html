@@ -401,6 +401,7 @@ function draw()
 				a.id = 'rp'+a.ref
 				if (!circles[a.id])
 				{
+					a.lat = fix_latlon(a)
 					let color = a.opening_hours == 'closed' ? colors.rp_closed : colors.rp
 					circles[a.id] = L.circleMarker(a, {radius: 3, color, weight: 1})
 						.bindPopup('', { data: a }).addTo(map)
@@ -416,6 +417,23 @@ function draw()
 			· <a href="https://www.pochta.ru/offices">Сайт почты</a>`
 
 	$('info', msg)
+}
+
+/** не ставим точки в одно и то же место */
+function fix_latlon(a)
+{
+	if (!a.lat) return a.lat
+
+	var lat = parseFloat(a.lat), hash = _=>lat+''+a.lon
+	if (!window.latlon) window.latlon = {}
+	let aa=1
+	while (window.latlon[hash()])
+	{
+		lat -= 0.5/10000
+		if (aa++>10) break;
+	}
+	window.latlon[hash()] = 1
+	return lat
 }
 
 var g_moveInterval = 0
