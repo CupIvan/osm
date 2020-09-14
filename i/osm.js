@@ -51,8 +51,8 @@ search: function(filter, handler){
 		_bounds_coords.push([_bounds[3], _bounds[0]])
 	}
 
-	ajax('/overpass/?data='+encodeURIComponent(query)
-		+'&domain='+encodeURIComponent(window.location.hostname), function(x){
+	fetch('/overpass/?data='+encodeURIComponent(query)
+		+'&domain='+encodeURIComponent(window.location.hostname)).then(_=>_.json()).then(x=>{
 		var i, j, a, data = []
 		var nodes = {}, ways = {}
 

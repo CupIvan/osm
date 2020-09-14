@@ -10,7 +10,6 @@
 	<script src="/i/ok.js"></script>
 	<script src="/i/lib.js"></script>
 	<script src="/i/josm.js"></script>
-	<script src="/i/ajax.js"></script>
 	<script src="/i/osm.js"></script>
 	<script src="/i/map.js"></script>
 	<script src="/i/common.js"></script>
@@ -31,7 +30,7 @@
 <script src="script.js"></script>
 <script>
 var map = map.init({lat: 53.814, lon: 55.679, z: 5, update_hash: false})
-var g_points = []
+var g_points = [], g_osm_points = []
 
 function str_replace(x, from, to)
 {
@@ -88,9 +87,9 @@ function make_popup(data)
 		{
 			var i, a
 			var d, di, dmin = -1
-			for (i=0; i<g_points.length;i++)
+			for (i=0; i<g_osm_points.length;i++)
 			{
-				d = map.distance(g_points[i], data.hq)
+				d = map.distance(g_osm_points[i], data.hq)
 				if (d > 10000) continue // ищем точку на расстоянии не более 10км
 				if (dmin < 0 || d < dmin) { dmin = d; di = i }
 			}
@@ -102,9 +101,9 @@ function make_popup(data)
 					'contact:website': data.hq['contact:website'],
 				}
 				if (re = data.hq.address.match(/(\d) эт/)) tags['level'] = re[1]
-				st += '<br>   <a href="'+josm.link_edit(g_points[di], tags)+'" target="josm">Копировать в JOSM</a>'
+				st += '<br>   <a href="'+josm.link_edit(g_osm_points[di], tags)+'" target="josm">Копировать в JOSM</a>'
 				st += '   |   <a href="'+josm.link_zoom(data.hq)+'" target="josm">Открыть в JOSM</a>'
-				L.polyline([data.hq, g_points[di]], {color: 'red'}).addTo(map);
+				L.polyline([data.hq, g_osm_points[di]], {color: 'red'}).addTo(map);
 				if (dmin > 20) map.setZoomAround(data.hq, 16) // зумим, если дальше 20 метров
 			}
 		}
@@ -123,32 +122,54 @@ function hint()
 /** основная функция для загрузки и отрисовки геометрии */
 function init()
 {
-	ajax('map.php', function(a){
+	fetch('map.php').then(_=>_.json()).then(a=>{
 		var add_point = function(a){
 			L.circleMarker(a, {radius: a.opened?10:5, color: "#55F"}).addTo(map).bindPopup(0, { data: {hq: a} })
 			stat.n++
+			g_points.push(a)
 		}
 		for (i=0; i<a.length; i++)
 			add_point(a[i])
 		hint()
 	})
-	osm.search({'name': 'Штаб Алексея Навального', 'node': true}, function(data){
-		if (!data.length) return $('info', 'Нет данных')
-		g_points = data
-		$('info', 'Данные загружены')
-		var i
-		for (i=0; i<data.length; i++)
-		{
-			L.circleMarker(data[i], {radius: 5, color: data[i].tags.disused == 'yes' ? "#777" : "#F55"}).addTo(map).bindPopup(0, { data: data[i] })
-			if (data[i].tags.disused == 'yes')
-				stat.osm_close++
-			else
-				stat.osm_open++
-		}
-		hint()
+	.then(_=>{
+		osm.search({'name': 'Штаб Алексея Навального', 'node': true}, data => {
+			if (!data.length) return $('info', 'Нет данных')
+			$('info', 'Данные загружены')
+			var i
+			for (i=0; i<data.length; i++)
+			{
+				g_osm_points.push(data[i])
+				L.circleMarker(data[i], {radius: 5, color: get_point_color(data[i])})
+					.addTo(map).bindPopup(0, { data: data[i] })
+				if (data[i].tags.disused == 'yes')
+					stat.osm_close++
+				else
+					stat.osm_open++
+			}
+			hint()
+		})
 	})
 
 	$('info', 'Загрузка...')
+}
+
+function get_point_color(a)
+{
+	if (a.tags.disused == 'yes') return '#777'
+	return get_point_distance(a) < 100 ? '#F55' : '#FF0'
+}
+
+function get_point_distance(a)
+{
+	let i, di, dmin = false
+	for (i=0; i<g_points.length;i++)
+	{
+		d = map.distance(g_points[i], a)
+		if (d > 10000) continue // ищем точку на расстоянии не более 10км
+		if (dmin === false || d < dmin) { dmin = d; di = i }
+	}
+	return dmin
 }
 
 init()

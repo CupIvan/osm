@@ -53,15 +53,14 @@ var josm = {
 
 /** проверка запущен JOSM или нет */
 setInterval(x=function(){
-	if (window.ajax)
-	window.ajax('http://127.0.0.1:8111/version', function(a){
+	fetch('http://127.0.0.1:8111/version').then(_=>_.json()).then(a=>{
 		josm.running = false
 		if (a.protocolversion)
 		{
 			josm.running = true
 			josm.version = a.protocolversion.major+'.'+a.protocolversion.minor
 		}
-	})
+	}).catch(e=>{})
 }, 10000)
 setTimeout(x, 2000)
 
