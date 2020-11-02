@@ -35,21 +35,25 @@ var map = map.init()
 
 /** типы зданий */
 var architecure = {
-	'stalinist neoclassicism': { color: '#0F0', title: 'сталинский ампир' },
-	'romanesque':              { color: '#00F', title: 'романская архитектура', },
-	'gothic':                  { color: '#0FF', title: 'готическая архитектура', },
-	'renaissance':             { color: '#F0F', title: 'архитектура возрождения', },
-	'neoclassicism':           { color: '#FF0', title: 'неоклассицизм', },
-	'art_nouveau':             { color: '#FFF', title: 'модерн' },
-	'modern':                  { color: '#070', title: 'модернизм', },
-	'modernism':               { color: '#F00', title: 'модерн (устаревший тег - нужно заменить на art_nouveau)' },
+	'romanesque':              { color: '#00F', title: 'романская архитектура (1000—1300)', },
+	'gothic':                  { color: '#0FF', title: 'готическая архитектура (1180—1520)', },
+	'renaissance':             { color: '#F0F', title: 'архитектура возрождения (1400—1620)', },
+	'mannerism':               { color: '#22A', title: 'маньеризм (1520—1600)' },
+	'neoclassicism':           { color: '#FF0', title: 'классицизм (1760—1840)', },
+	'empire':                  { color: '#22A', title: 'ампир (1800—1830)' },
+	'pseudo-russian':          { color: '#007', title: 'псевдорусский стиль (1830—1917)' },
+	'art_nouveau':             { color: '#FFF', title: 'модерн (1890—1910)' },
+	'modern':                  { color: '#070', title: 'модернизм (1900—1980)', },
+	'constructivism':          { color: '#077', title: 'конструктивизм (1920—1940)' },
+	'stalinist_neoclassicism': { color: '#0F0', title: 'сталинский ампир (1930—1950)' },
 	'new_objectivity':         { color: '#007', title: 'новая вещественность' },
-	'constructivism':          { color: '#077', title: 'конструктивизм' },
 	'postconstructivism':      { color: '#707', title: 'постконструктивизм' },
 	'contemporary':            { color: '#770', title: 'архитектура 21 века' },
 	'eclectic':                { color: '#07F', title: 'эклектизм' },
-	'classicism':              { color: '#000', title: '' },
-	'oldrussian':              { color: '#000', title: '' },
+
+	'modernism':               { color: '#F00', title: 'устаревший тег modernism<br>нужно заменить на <i>art_nouveau</i>' },
+	'classicism':              { color: '#F00', title: 'устаревший тег classicism<br>нужно заменить на <i>neoclassicism</i>' },
+	'oldrussian':              { color: '#F00', title: 'устаревший тег oldrussian<br>нужно заменить на <i>...</i>' },
 }
 function getBuildingColor(a)
 {
