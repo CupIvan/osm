@@ -22,7 +22,7 @@ init: function(params){
 
 	const maps = {
 		'Mapnik':
-			L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
 				maxZoom: 20,
 				maxNativeZoom: 18,
@@ -34,13 +34,13 @@ init: function(params){
 				maxNativeZoom: 18,
 			}),
 		'German':
-			L.tileLayer('http://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png', {
+			L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
 				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
 				maxZoom: 20,
 				maxNativeZoom: 18,
 			}),
 		'France':
-			L.tileLayer('http://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+			L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
 				attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
 				maxZoom: 20,
 				maxNativeZoom: 18,
